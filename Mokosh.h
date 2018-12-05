@@ -5,4 +5,7 @@
 #include "MQTT.h"
 #include "WifiConnect.h"
 #include "FirstRun.h"
+
+#ifdef ENABLE_NEOPIXEL
 #include "NeoPixel.h"
+#endif
