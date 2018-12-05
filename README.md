@@ -49,6 +49,24 @@ similar information.
 Contains functions for sending debug messages to the serial port and debug
 levels definitions.
 
+#### Available functions
+`void Debug_init(uint8_t minlevel)`
+Sets up the Debug system with a minimum level of messages to be passed through
+to the serial output.
+
+`uint8_t Debug_currentLevel()`
+Gets the current debug level.
+
+`void Debug_print(uint8_t level, const char* topic, {message});`
+Prints debug information of the defined level and defined topic (so you can
+group messages about similar things). Debug message may be on of the following
+types:
+
+* String,
+* float,
+* int,
+* uint32_t.
+
 ### Error.h
 Will "blink out" errors or show error codes using the NeoPixel strip. It is
 based on the numerical value of errors, defined are:
@@ -79,6 +97,14 @@ and one is not, and then:
 After 60 seconds (for NeoPixel) or for 30 "blinking out" errors the device will
 restart.
 
+#### Available functions
+`void Error_configure(bool useBuiltInLed, bool useNeoPixel)`
+Sets up the Error system allowing you to choose between using built-in LED
+or NeoPixel strip.
+
+`void Error_show(uint16_t errorCode)`
+Shows (using LED or NeoPixel strip) the error of the specified code.
+
 ### FirstRun.h
 Is responsible for the "first run configuration" dialog. In the first run mode
 the device will create an Access Point named PREFIX_XXXXX, where PREFIX is
@@ -97,13 +123,81 @@ software version and informational version where you can put additional
 information, date of build (for builds with DEBUG_LEVEL set to 1) and MD5
 checksum of the current firmware.
 
+#### Available functions
+`void FirstRun_configure(const char* _version, const char* _informationalVersion, const char* _buildDate)`
+Sets up the First Run system. Requires passing current version info string,
+and informational version (e.g. build number) and build date for presenting
+this information in response to `/whois`.
+
+`void FirstRun_start(char* prefix)`
+Starts the Wi-Fi AP with a name of `prefix` + `_XXXXX`, starts the HTTP server
+and starts listening for a client.
+
+`void FirstRun_handle();`
+Handles connection with a new client.
+
 ### MQTT.h
 Will communicate with a MQTT broker. By default the device will subscribe
-the topic `PREFIX_XXXXX/cmd`, awaiting for commands. You have to provide
+the topic `host/cmd`, awaiting for commands. You have to provide
 your own function responding to the commands using Mqtt_setCallback().
+
+#### Available functions
+`bool Mqtt_isConnected()`
+Returns if there is a connection with MQTT broker.
+
+`bool Mqtt_loop()`
+Handles MQTT subscription - receiving messages and commands.
+
+`void Mqtt_setup(const char* broker, uint16_t port)`
+Sets up the connection to a specific broker on a specific port.
+
+`bool Mqtt_reconnect(const char* hostString)`
+Reconnects or connects to the broker and subscribe to the command topic, which
+is `hostString/cmd`.
+
+`void Mqtt_publish(const char* topic, const char* payload)`
+Publishes any string message to the MQTT topic.
+
+`void Mqtt_publish(const char* topic, float payload)`
+Publishes float value (e.g. sensor data) to the MQTT topic.
+
+`void Mqtt_setCallback(void(*callback)(char*, uint8_t*, unsigned int))`
+Sets up the function which is being run when there is a new message on any
+of the subscribed topics.
+
+`void Mqtt_sendCrash(const char* topic)`
+Sends recorded crash data to the MQTT server, line by line.
 
 ### NeoPixel.h
 Is responsible for the NeoPixel strip.
+
+#### Available functions
+`void NeoPixel_setup(uint8_t pnum)`
+Sets up a NeoPixel strip with a pnum number of LEDs (up to 16).
+
+`void NeoPixel_progress(uint8_t level, uint32_t color)`
+Shows progress: sets "level" number of LEDs to the color defined, rest is black.
+
+`void NeoPixel_color(uint32_t color)`
+Turns on every LED in the strip to the defined color.
+
+`void NeoPixel_error(uint16_t errorCode)`
+Shows error code using NeoPixel strip.
+
+`void NeoPixel_anim(Anim type, uint32_t color)`
+Shows indefinite animation of the defined type.
+
+`void NeoPixel_animtime(Anim type, uint32_t color, uint16_t time)`
+Shows timed animation of the defined type.
+
+#### Animations and colors
+
+There are three animations built-in: KnightRider1, KnightRider2 and RainbowCycle
+where the first ones are the cylon-visor or KITT's visor moving from one side
+to another, and RainbowCycle is just showing different colors.
+
+There are built-in color constants for easier development: BrightRed, Black, 
+Green, Lime and Orange.
 
 ### OTA.h
 Is responsible for the Over-The-Air (OTA) updates.
@@ -128,8 +222,25 @@ message.
 Due to [issue #1017](https://github.com/esp8266/Arduino/issues/1017) automatic
 restart after update may not work.
 
+#### Available functions
+
+`void handleOTA(Configuration config, const char* version)`
+Runs the OTA update based on the configuration to the specified version.
+
 ### SpiffsConfig.h
 Is handling saving and reading config from `config.json` file.
 
+The configuration system is currently tightly coupled to the Chione project,
+and will be overhauled in the near future.
+
 ### WifiConnect.h
 Is responsible for connecting to the wireless network.
+
+#### Available functions
+
+`bool WiFi_connect(const char* ssid, const char* password, const char* prefix)`
+Connects to the Wi-Fi network defined by SSID and WPA2 password, settings the
+hostname to `PREFIX_XXXXX`.
+
+`char* WiFi_getHostString()`
+Returns internal chip ID.
