@@ -14,9 +14,8 @@ This version of Mokosh is heavily in development.
 Code is prepared for the Arduino platform, currently building on version 1.8.
 Prepared only for ESP8266, tested on NodeMCU and WeMos D1 R2.
 
-To build a Mokosh-based application, you have to define a few compilation flags:
-* `ENABLE_NEOPIXEL` will enable showing errors using the NeoPixel strip,
-* `DEBUG_LEVEL` will define verbosity levels for debug printing functions.
+To build a Mokosh-based application, you have to define a a compilation flag:
+* `ENABLE_NEOPIXEL` will enable showing errors using the NeoPixel strip.
 
 And you have to just include the main file somewhere in the beginning of your
 Arduino sketch:
@@ -27,27 +26,25 @@ Arduino sketch:
 
 Then you can just start using Mokosh functions.
 
-### Debug Level
-Serial output (by default 115200 kbps) verbosity is defined by `DEBUG_LEVEL`
-constant, allowing values 1, 2, 4 or 8.
+### Dependencies
+The library is dependent on the following libraries:
 
-When the level is set to a certain value, all messages with level defined as
-higher or equal are sent to a serial port. E.g.: `DEBUG_LEVEL 2` will allow
-sending messages with level set to `DLVL_INFO` (2), `DLVL_WARNING` (4) and 
-`DLVL_ERROR` (8), but not `DLVL_DEBUG` (1).
-
-### SPIFFS Configuration
-Configuration for the application is saved in the SPIFFS in `data/` directory,
-int the file `config.json`.
-
-Configuration is used to set MQTT broker, port, OTA update server address and
-similar information.
+* [FastLED](https://github.com/FastLED/FastLED), up to 3.2.1,
+* [ArduinoJson](https://github.com/bblanchon/ArduinoJson), up to 5.13.4.
 
 ## Structure
 
 ### Debug.h
 Contains functions for sending debug messages to the serial port and debug
 levels definitions.
+
+Serial output (by default 115200 kbps) verbosity is defined by minlevel
+value in setting up debug, allowing values 1, 2, 4 or 8.
+
+When the level is set to a certain value, all messages with level defined as
+higher or equal are sent to a serial port. E.g.: `minlevel` in init set to 2
+will allow sending messages with level set to `DLVL_INFO` (2), `DLVL_WARNING` 
+(4) and `DLVL_ERROR` (8), but not `DLVL_DEBUG` (1).
 
 #### Available functions
 `void Debug_init(uint8_t minlevel)`
@@ -228,7 +225,12 @@ restart after update may not work.
 Runs the OTA update based on the configuration to the specified version.
 
 ### SpiffsConfig.h
-Is handling saving and reading config from `config.json` file.
+Is handling saving and reading config from `config.json` file. Configuration for
+the application is saved in the SPIFFS in `data/` directory, in the file 
+`config.json`.
+
+Configuration is used to set MQTT broker, port, OTA update server address and
+similar information.
 
 The configuration system is currently tightly coupled to the Chione project,
 and will be overhauled in the near future.
