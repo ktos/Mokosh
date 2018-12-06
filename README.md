@@ -1,5 +1,7 @@
 # Mokosh
 
+[![Build status](https://dev.azure.com/ktos/Mokosh/_apis/build/status/Mokosh-CI)](https://dev.azure.com/ktos/Mokosh/_build/latest?definitionId=3)
+
 Mokosh is a pseudo-framework, extracted from the "Chione" project, with a goal
 to be a simple set of a functions for easily built similarly operated IoT
 devices.
@@ -45,7 +47,7 @@ value in setting up debug, allowing values 1, 2, 4 or 8.
 
 When the level is set to a certain value, all messages with level defined as
 higher or equal are sent to a serial port. E.g.: `minlevel` in init set to 2
-will allow sending messages with level set to `DLVL_INFO` (2), `DLVL_WARNING` 
+will allow sending messages with level set to `DLVL_INFO` (2), `DLVL_WARNING`
 (4) and `DLVL_ERROR` (8), but not `DLVL_DEBUG` (1).
 
 #### Available functions
@@ -195,7 +197,7 @@ There are three animations built-in: KnightRider1, KnightRider2 and RainbowCycle
 where the first ones are the cylon-visor or KITT's visor moving from one side
 to another, and RainbowCycle is just showing different colors.
 
-There are built-in color constants for easier development: BrightRed, Black, 
+There are built-in color constants for easier development: BrightRed, Black,
 Green, Lime and Orange.
 
 ### OTA.h
@@ -228,7 +230,7 @@ Runs the OTA update based on the configuration to the specified version.
 
 ### SpiffsConfig.h
 Is handling saving and reading config from `config.json` file. Configuration for
-the application is saved in the SPIFFS in `data/` directory, in the file 
+the application is saved in the SPIFFS in `data/` directory, in the file
 `config.json`.
 
 Configuration is used to set MQTT broker, port, OTA update server address and
