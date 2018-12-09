@@ -3,11 +3,7 @@
 #ifndef _ESPERROR_h
 #define _ESPERROR_h
 
-#if defined(ARDUINO) && ARDUINO >= 100
-	#include "Arduino.h"
-#else
-	#include "WProgram.h"
-#endif
+#include "Arduino.h"
 
 #define ERROR_CONFIG 10
 #define ERROR_SPIFFS 50

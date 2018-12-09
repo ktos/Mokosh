@@ -4,12 +4,7 @@
 #define _OTA_h
 
 #include "SpiffsConfig.h"
-
-#if defined(ARDUINO) && ARDUINO >= 100
-	#include "Arduino.h"
-#else
-	#include "WProgram.h"
-#endif
+#include "Arduino.h"
 
 // handles the OTA update by using the configuration and updating to
 // the desired version

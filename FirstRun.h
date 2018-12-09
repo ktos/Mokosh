@@ -3,11 +3,7 @@
 #ifndef _FIRSTRUN_h
 #define _FIRSTRUN_h
 
-#if defined(ARDUINO) && ARDUINO >= 100
-	#include "Arduino.h"
-#else
-	#include "WProgram.h"
-#endif
+#include "Arduino.h"
 
 void FirstRun_configure(const char* _version, const char* _informationalVersion, const char* _buildDate);
 

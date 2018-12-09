@@ -3,11 +3,7 @@
 #ifndef _NEOPIXEL_h
 #define _NEOPIXEL_h
 
-#if defined(ARDUINO) && ARDUINO >= 100
 #include "Arduino.h"
-#else
-#include "WProgram.h"
-#endif
 
 enum Anim { KnightRider1, KnightRider2, RainbowCycle };
 enum Colors { BrightRed = 16711680, Black = 0, Green = 32768, Lime = 65280, Orange = 0xFF3000 };

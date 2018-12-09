@@ -3,11 +3,7 @@
 #ifndef _DEBUG_h
 #define _DEBUG_h
 
-#if defined(ARDUINO) && ARDUINO >= 100
-	#include "Arduino.h"
-#else
-	#include "WProgram.h"
-#endif
+#include "Arduino.h"
 
 const uint8_t DLVL_DEBUG = 1;
 const uint8_t DLVL_INFO = 2;
