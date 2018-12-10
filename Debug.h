@@ -24,5 +24,7 @@ void Debug_print(uint8_t level, const char* topic, int value);
 
 void Debug_print(uint8_t level, const char* topic, uint32_t value);
 
+bool Debug_isInit();
+
 #endif
 

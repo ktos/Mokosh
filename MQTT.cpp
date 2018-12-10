@@ -36,7 +36,7 @@ bool Mqtt_reconnect(const char* hostString)
 		}
 		else {
 			Debug_print(DLVL_ERROR, "MQTT", "Failed");
-			Debug_print(DLVL_ERROR, "MQTT", mqtt.state());			
+			Debug_print(DLVL_ERROR, "MQTT", mqtt.state());
 
 			// if not connected in the third trial, give up
 			if (trials > 3)
