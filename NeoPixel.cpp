@@ -1,14 +1,18 @@
 #define FASTLED_ESP8266_RAW_PIN_ORDER
 #include "NeoPixel.h"
+#include "Debug.h"
 #include <FastLED.h>
 
 CRGB leds[16];
 uint8_t pixnum;
 
+bool neopixel_isInit = false;
+
 void NeoPixel_setup(uint8_t pnum)
 {
 	pixnum = pnum;
-	FastLED.addLeds<NEOPIXEL, 3>(leds, pixnum);	
+	FastLED.addLeds<NEOPIXEL, 3>(leds, pixnum);
+    neopixel_isInit = true;
 }
 
 uint32_t NeoPixel_convertColorToCode(int r, int g, int b)
@@ -18,6 +22,11 @@ uint32_t NeoPixel_convertColorToCode(int r, int g, int b)
 
 void NeoPixel_progress(uint8_t level, uint32_t color)
 {
+    if (!neopixel_isInit) {
+        Debug_print(DLVL_WARNING, "MOKOSH", "NeoPixel is not initialized");
+        return;
+    }
+
 	level = level % pixnum;
 
 	for (uint8_t i = 0; i < level; i++)
@@ -28,11 +37,21 @@ void NeoPixel_progress(uint8_t level, uint32_t color)
 
 void NeoPixel_color(uint32_t color)
 {
+    if (!neopixel_isInit) {
+        Debug_print(DLVL_WARNING, "MOKOSH-NEOPIXEL", "NeoPixel is not initialized");
+        return;
+    }
+
 	FastLED.showColor(CRGB(color));
 }
 
 void NeoPixel_error(uint16_t errorCode)
 {
+    if (!neopixel_isInit) {
+        Debug_print(DLVL_WARNING, "MOKOSH-NEOPIXEL", "NeoPixel is not initialized");
+        return;
+    }
+
 	leds[0] = CRGB::DarkBlue;
 	leds[1] = CRGB::DarkBlue;
 	leds[2] = CRGB::Black;
@@ -90,6 +109,11 @@ uint32_t color_wheel(uint8_t pos) {
 
 void NeoPixel_anim(Anim type, uint32_t color)
 {
+    if (!neopixel_isInit) {
+        Debug_print(DLVL_WARNING, "MOKOSH-NEOPIXEL", "NeoPixel is not initialized");
+        return;
+    }
+
 	switch (type)
 	{
 	case KnightRider1:
@@ -139,12 +163,17 @@ void NeoPixel_anim(Anim type, uint32_t color)
 
 void NeoPixel_animtime(Anim type, uint32_t color, uint16_t time)
 {
+    if (!neopixel_isInit) {
+        Debug_print(DLVL_WARNING, "MOKOSH-NEOPIXEL", "NeoPixel is not initialized");
+        return;
+    }
+
 	unsigned long start = millis();
 
 	while (true) {
 		NeoPixel_anim(type, color);
-		
-		if (millis() - start > time) 
+
+		if (millis() - start > time)
 			break;
 	}
 }
