@@ -5,7 +5,7 @@
 #include "Debug.h"
 
 uint8_t minlevel;
-bool isInit = false;
+bool debug_isInit = false;
 
 uint8_t Debug_currentLevel()
 {
@@ -15,18 +15,18 @@ uint8_t Debug_currentLevel()
 void Debug_init(uint8_t minl)
 {
 	minlevel = minl;
-	isInit = true;
+	debug_isInit = true;
     Serial.begin(115200);
 }
 
-bool Debug_isInit()
+bool Debug_debug_isInit()
 {
-    return isInit;
+    return debug_isInit;
 }
 
 void Debug_print(uint8_t level, const char* topic, const char* message)
 {
-    if (!isInit)
+    if (!debug_isInit)
         return;
 
 	if (level < minlevel)
@@ -41,7 +41,7 @@ void Debug_print(uint8_t level, const char* topic, const char* message)
 
 void Debug_print(uint8_t level, const char* topic, String message)
 {
-    if (!isInit)
+    if (!debug_isInit)
         return;
 
 	if (level < minlevel)
@@ -56,7 +56,7 @@ void Debug_print(uint8_t level, const char* topic, String message)
 
 void Debug_print(uint8_t level, const char* topic, float value)
 {
-    if (!isInit)
+    if (!debug_isInit)
         return;
 
 	char result[8];
@@ -67,7 +67,7 @@ void Debug_print(uint8_t level, const char* topic, float value)
 
 void Debug_print(uint8_t level, const char* topic, int value)
 {
-    if (!isInit)
+    if (!debug_isInit)
         return;
 
 	char result[8];
@@ -78,7 +78,7 @@ void Debug_print(uint8_t level, const char* topic, int value)
 
 void Debug_print(uint8_t level, const char* topic, uint32_t value)
 {
-    if (!isInit)
+    if (!debug_isInit)
         return;
 
 	char result[16];
