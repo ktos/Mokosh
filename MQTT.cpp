@@ -6,12 +6,14 @@
 
 IPAddress brokerAddress;
 uint16_t brokerPort;
+bool mqtt_isInit = false;
 
 void Mqtt_setup(const char* broker, uint16_t port)
 {
 	Debug_print(DLVL_DEBUG, "MQTT", broker);
 	brokerAddress.fromString(broker);
 	brokerPort = port;
+    mqtt_isInit = true;
 }
 
 WiFiClient client;
@@ -50,6 +52,11 @@ bool Mqtt_reconnect(const char* hostString)
 
 void Mqtt_publish(const char* topic, String payload)
 {
+    if (!mqtt_isInit) {
+        Debug_print(DLVL_WARNING, "MOKOSH", "MQTT is not initialized");
+        return;
+    }
+
 	int buflen = payload.length() + 1;
 	char* buf = (char*)malloc(buflen);
 	payload.toCharArray(buf, buflen);
@@ -61,6 +68,11 @@ void Mqtt_publish(const char* topic, String payload)
 
 void Mqtt_publish(const char* topic, const char* payload)
 {
+    if (!mqtt_isInit) {
+        Debug_print(DLVL_WARNING, "MOKOSH", "MQTT is not initialized");
+        return;
+    }
+
 	mqtt.publish(topic, payload);
 }
 
@@ -75,21 +87,41 @@ void Mqtt_publish(const char* topic, float payload)
 
 bool Mqtt_isConnected()
 {
+    if (!mqtt_isInit) {
+        Debug_print(DLVL_WARNING, "MOKOSH", "MQTT is not initialized");
+        return;
+    }
+
 	return mqtt.connected();
 }
 
 bool Mqtt_loop()
 {
+    if (!mqtt_isInit) {
+        Debug_print(DLVL_WARNING, "MOKOSH", "MQTT is not initialized");
+        return;
+    }
+
 	return mqtt.loop();
 }
 
 void Mqtt_setCallback(void(*callback)(char*, uint8_t*, unsigned int))
 {
+    if (!mqtt_isInit) {
+        Debug_print(DLVL_WARNING, "MOKOSH", "MQTT is not initialized");
+        return;
+    }
+
 	mqtt.setCallback(callback);
 }
 
 void Mqtt_sendCrash(const char* topic)
 {
+    if (!mqtt_isInit) {
+        Debug_print(DLVL_WARNING, "MOKOSH", "MQTT is not initialized");
+        return;
+    }
+
 	// Note that 'EEPROM.begin' method is reserving a RAM buffer
 	// The buffer size is SAVE_CRASH_EEPROM_OFFSET + SAVE_CRASH_SPACE_SIZE
 	EEPROM.begin(SAVE_CRASH_EEPROM_OFFSET + SAVE_CRASH_SPACE_SIZE);
