@@ -94,7 +94,7 @@ bool Mqtt_isConnected()
 {
     if (!mqtt_isInit) {
         Debug_print(DLVL_WARNING, "MOKOSH", "MQTT is not initialized");
-        return;
+        return false;
     }
 
 	return mqtt.connected();
@@ -104,7 +104,7 @@ bool Mqtt_loop()
 {
     if (!mqtt_isInit) {
         Debug_print(DLVL_WARNING, "MOKOSH", "MQTT is not initialized");
-        return;
+        return false;
     }
 
 	return mqtt.loop();
