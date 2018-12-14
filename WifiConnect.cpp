@@ -4,10 +4,19 @@
 
 char hostString[16] = { 0 };
 
-bool WiFi_connect(const char* ssid, const char* password, const char* prefix)
+void WiFi_init(const char* prefix) {
+    sprintf(hostString, "%s_%06X", prefix, ESP.getChipId());
+}
+
+bool WiFi_isInit()
+{
+    return (hostString[0] != 0);
+}
+
+bool WiFi_connect(const char* ssid, const char* password)
 {
 	WiFi.enableAP(0);
-	sprintf(hostString, "%s_%06X", prefix, ESP.getChipId());
+
 	Debug_print(DLVL_INFO, "WIFI", hostString);
 	WiFi.hostname(hostString);
 

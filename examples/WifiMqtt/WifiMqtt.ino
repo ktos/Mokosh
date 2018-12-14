@@ -7,7 +7,8 @@ void setup() {
 
     // connects to the WiFi network called yourssid with password yourpassword
     // setting hostname to Mokosh_XXXXX
-    WiFi_connect("yourssid", "yourpassword", "Mokosh");
+    WiFi_init("Mokosh");
+    WiFi_connect("yourssid", "yourpassword");
 
     // will connect to MQTT broker at 192.168.1.10 at port 1883
     Mqtt_setup("192.168.1.10", 1883);
