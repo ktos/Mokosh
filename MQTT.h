@@ -31,4 +31,7 @@ void Mqtt_setCallback(void(*callback)(char*, uint8_t*, unsigned int));
 // sends crash data to the MQTT server, line by line
 void Mqtt_sendCrash(const char* topic);
 
+// returns if MQTT system has been initialized
+bool Mqtt_isInit();
+
 #endif

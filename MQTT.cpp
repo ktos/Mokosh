@@ -8,6 +8,11 @@ IPAddress brokerAddress;
 uint16_t brokerPort;
 bool mqtt_isInit = false;
 
+bool Mqtt_isInit()
+{
+    return mqtt_isInit;
+}
+
 void Mqtt_setup(const char* broker, uint16_t port)
 {
 	Debug_print(DLVL_DEBUG, "MQTT", broker);
