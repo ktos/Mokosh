@@ -1,7 +1,3 @@
-// 
-// 
-// 
-
 #include "Error.h"
 #include "NeoPixel.h"
 #include "Debug.h"
@@ -26,7 +22,6 @@ void Error_showBlinking(uint16_t errorCode)
 		Debug_print(DLVL_ERROR, "ERROR", errorCode);
 
 		NeoPixel_error(errorCode);
-
 		delay(60000);
 	}
 	else {

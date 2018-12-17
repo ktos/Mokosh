@@ -52,37 +52,67 @@ void NeoPixel_error(uint16_t errorCode)
         return;
     }
 
-	leds[0] = CRGB::DarkBlue;
-	leds[1] = CRGB::DarkBlue;
-	leds[2] = CRGB::Black;
+    // if there are 8 LEDs on the strip (like Chione devices)
+    if (pixnum >= 8) {
+        leds[0] = CRGB::DarkBlue;
+        leds[1] = CRGB::DarkBlue;
+        leds[2] = CRGB::Black;
 
-	if (errorCode >= 10)
-		leds[3] = CRGB::DarkGreen;
+        if (errorCode >= 10)
+            leds[3] = CRGB::DarkGreen;
 
-	if (errorCode >= 50)
-		leds[3] = CRGB::DarkBlue;
+        if (errorCode >= 50)
+            leds[3] = CRGB::DarkBlue;
 
-	if (errorCode >= 100)
-		leds[3] = CRGB::DarkRed;
+        if (errorCode >= 100)
+            leds[3] = CRGB::DarkRed;
 
-	if (errorCode >= 200)
-		leds[4] = CRGB::DarkRed;
+        if (errorCode >= 200)
+            leds[4] = CRGB::DarkRed;
 
-	if (errorCode >= 500)
-		leds[5] = CRGB::DarkRed;
+        if (errorCode >= 500)
+            leds[5] = CRGB::DarkRed;
 
-	if (errorCode >= 1000)
-		leds[6] = CRGB::DarkRed;
+        if (errorCode >= 1000)
+            leds[6] = CRGB::DarkRed;
 
-	if (errorCode >= 2000)
-		leds[7] = CRGB::DarkRed;
+        if (errorCode >= 2000)
+            leds[7] = CRGB::DarkRed;
 
-	if (errorCode >= 5000)
-		leds[3] = CRGB::Yellow;
+        if (errorCode >= 5000)
+            leds[3] = CRGB::Yellow;
 
-	if (errorCode >= 10000)
-		leds[4] = CRGB::Yellow;
+        if (errorCode >= 10000)
+            leds[4] = CRGB::Yellow;
+    } else {
+        // if there is less, use only one
+        if (errorCode >= 10)
+            leds[0] = CRGB::DarkGreen;
 
+        if (errorCode >= 50)
+            leds[0] = CRGB::DarkBlue;
+
+        if (errorCode >= 100)
+            leds[0] = CRGB::DarkRed;
+
+        if (errorCode >= 200)
+            leds[0] = CRGB::DarkCyan;
+
+        if (errorCode >= 500)
+            leds[0] = CRGB::DarkMagenta;
+
+        if (errorCode >= 1000)
+            leds[0] = CRGB::DarkOrange;
+
+        if (errorCode >= 2000)
+            leds[0] = CRGB::GhostWhite;
+
+        if (errorCode >= 5000)
+            leds[0] = CRGB::Lime;
+
+        if (errorCode >= 10000)
+            leds[0] = CRGB::Yellow;
+    }
 
 	FastLED.show();
 }
