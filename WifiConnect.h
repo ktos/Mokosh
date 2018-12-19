@@ -6,7 +6,7 @@
 #include "Arduino.h"
 
 // tries connecting to the wireless network
-bool WiFi_connect(const char* ssid, const char* password, const char* prefix);
+bool WiFi_connect(const char* ssid, const char* password);
 
 // returns internal host name
 char* WiFi_getHostString();
