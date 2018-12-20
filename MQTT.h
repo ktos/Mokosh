@@ -16,7 +16,7 @@ void Mqtt_setup(const char* broker, uint16_t port);
 
 // (re)connects to the MQTT broker and subscribes
 // to the command topic
-bool Mqtt_reconnect(const char* hostString);
+bool Mqtt_reconnect();
 
 // publishes any string message to the MQTT topic
 void Mqtt_publish(const char* topic, const char* payload);

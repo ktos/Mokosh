@@ -1,16 +1,170 @@
-#include <ESP8266mDNS.h>
 #include <PubSubClient.h>
 #include <EspSaveCrash.h>
+#include <ESP8266WiFi.h>
 #include "MQTT.h"
 #include "Debug.h"
+#include "Error.h"
+#include "WifiConnect.h"
+#include "SpiffsConfig.h"
 
 IPAddress brokerAddress;
 uint16_t brokerPort;
 bool mqtt_isInit = false;
 
+char debug_topic[32] = { 0 };
+char version_topic[32] = { 0 };
+char cmd_topic[32] = { 0 };
+
+WiFiClient client;
+PubSubClient mqtt(client);
+
 bool Mqtt_isInit()
 {
     return mqtt_isInit;
+}
+
+// function run when new message from the MQTT is sent
+void Mqtt_onCommand(char* topic, uint8_t* message, unsigned int length)
+{
+	char msg[32] = { 0 };
+	for (unsigned int i = 0; i < length; i++)
+	{
+		msg[i] = message[i];
+	}
+	msg[length + 1] = 0;
+
+	Debug_print(DLVL_DEBUG, "COMMAND", msg);
+
+	// if (strcmp(msg, "gver") == 0) {
+	// 	char version_topic[32];
+	// 	char* hostname = WiFi_getHostString();
+	// 	sprintf(version_topic, "%s/version", hostname);
+	// 	Mqtt_publish(version_topic, VERSION);
+
+	// 	return;
+	// }
+
+	// if (strcmp(msg, "getfullver") == 0) {
+	// 	Mqtt_publish(debug_topic, INFORMATIONAL_VERSION);
+
+	// 	String buildInfo = (Debug_currentLevel() < 4) ? "DEBUG" : "RELEASE";
+
+	// 	char buildInfoBuf[32];
+	// 	buildInfo.toCharArray(buildInfoBuf, 32);
+	// 	Mqtt_publish(debug_topic, buildInfoBuf);
+
+	// 	return;
+	// }
+
+	if (strcmp(msg, "gmd5") == 0) {
+		char md5[128];
+		ESP.getSketchMD5().toCharArray(md5, 128);
+		Mqtt_publish(debug_topic, md5);
+
+		return;
+	}
+
+	// if (strcmp(msg, "getbuilddate") == 0) {
+	// 	Mqtt_publish(debug_topic, BUILD_DATE);
+
+	// 	return;
+	// }
+
+	if (strcmp(msg, "clearcrash") == 0) {
+		SaveCrash.clear();
+
+		return;
+	}
+
+	if (strcmp(msg, "getcrashcount") == 0) {
+		int crashCount = SaveCrash.count();
+		Mqtt_publish(debug_topic, crashCount);
+		return;
+	}
+
+	if (strcmp(msg, "printcrashserial") == 0) {
+		SaveCrash.print();
+		return;
+	}
+
+	if (strcmp(msg, "getcrash") == 0) {
+		Mqtt_sendCrash(debug_topic);
+
+		return;
+	}
+
+	if (strcmp(msg, "reboot") == 0) {
+		ESP.restart();
+
+		return;
+	}
+
+	if (strcmp(msg, "factory") == 0) {
+		Debug_print(DLVL_WARNING, "FACTORY", "Performing factory reset.");
+		SpiffsConfig_remove();
+		ESP.restart();
+
+		return;
+	}
+
+	// if (strcmp(msg, "printconfigserial") == 0) {
+	// 	Debug_print(DLVL_DEBUG, "CONFIG", "Printing configuration.");
+	// 	SpiffsConfig_prettyPrint(config);
+
+	// 	return;
+	// }
+
+	// if (strcmp(msg, "updateconfig") == 0) {
+	// 	Debug_print(DLVL_INFO, "CONFIG", "Saving configuration to SPIFFS");
+	// 	SpiffsConfig_update(config);
+
+	// 	return;
+	// }
+
+	// if (strcmp(msg, "reloadconfig") == 0) {
+	// 	Debug_print(DLVL_INFO, "CONFIG", "Reloading configuration from SPIFFS");
+	// 	SpiffsConfig_load(&config);
+
+	// 	return;
+	// }
+
+	if (msg[0] == 's') {
+		String msg2 = String(msg);
+
+		if (msg2.startsWith("showerror=")) {
+			long errorCode = msg2.substring(10).toInt();
+			Error_show(errorCode);
+			return;
+		}
+
+		// if (msg2.startsWith("sota=")) {
+		// 	String version = msg2.substring(5);
+
+		// 	char buf[32];
+		// 	version.toCharArray(buf, 32);
+
+		// 	handleOTA(config, buf);
+		// }
+
+		// if (msg2.startsWith("setconfig=")) {
+		// 	String data = msg2.substring(10);
+
+		// 	int separator = data.indexOf(",");
+		// 	String field = data.substring(0, separator);
+		// 	String value = data.substring(separator + 1);
+
+		// 	Debug_print(DLVL_DEBUG, "SETCONFIG", field);
+		// 	Debug_print(DLVL_DEBUG, "SETCONFIG", value);
+
+		// 	char field2[32];
+		// 	field.toCharArray(field2, 32);
+
+		// 	char value2[64];
+		// 	value.toCharArray(value2, 64);
+
+		// 	SpiffsConfig_updateField(&config, field2, value2);
+		// }
+	}
 }
 
 void Mqtt_setup(const char* broker, uint16_t port)
@@ -18,25 +172,28 @@ void Mqtt_setup(const char* broker, uint16_t port)
 	Debug_print(DLVL_DEBUG, "MQTT", broker);
 	brokerAddress.fromString(broker);
 	brokerPort = port;
+    mqtt.setCallback(Mqtt_onCommand);
+
+    char* host = WiFi_getHostString();
+    sprintf(debug_topic, "%s/debug", host);
+    sprintf(cmd_topic, "%s/cmd", host);
+    sprintf(version_topic, "%s/cmd", host);
+
     mqtt_isInit = true;
 }
 
-WiFiClient client;
-PubSubClient mqtt(client);
-
-bool Mqtt_reconnect(const char* hostString)
+bool Mqtt_reconnect()
 {
 	mqtt.setServer(brokerAddress, brokerPort);
 	uint8_t trials = 0;
 
 	while (!client.connected()) {
 		trials++;
-		if (mqtt.connect(hostString)) {
+		if (mqtt.connect(WiFi_getHostString())) {
 			Debug_print(DLVL_DEBUG, "MQTT", "Connected");
 
 			Debug_print(DLVL_DEBUG, "MQTT", "Subscribing");
-			char cmd_topic[32];
-			sprintf(cmd_topic, "%s/cmd", hostString);
+            Debug_print(DLVL_DEBUG, "MQTT", cmd_topic);
 			mqtt.subscribe(cmd_topic);
 
 			return true;
@@ -117,7 +274,7 @@ void Mqtt_setCallback(void(*callback)(char*, uint8_t*, unsigned int))
         return;
     }
 
-	mqtt.setCallback(callback);
+    mqtt.setCallback(callback);
 }
 
 void Mqtt_sendCrash(const char* topic)
