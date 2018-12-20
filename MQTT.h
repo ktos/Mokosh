@@ -14,9 +14,11 @@ bool Mqtt_loop();
 // sets up values for MQTT connection: broker address and port
 void Mqtt_setup(const char* broker, uint16_t port);
 
-// (re)connects to the MQTT broker and subscribes
-// to the command topic
+// (re)connects to the MQTT broker
 bool Mqtt_reconnect();
+
+// subscribes to the defined MQTT topic
+void Mqtt_subscribe(const char* topic);
 
 // publishes any string message to the MQTT topic
 void Mqtt_publish(const char* topic, const char* payload);
