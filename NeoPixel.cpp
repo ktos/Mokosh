@@ -10,8 +10,17 @@ bool neopixel_isInit = false;
 
 void NeoPixel_setup(uint8_t pnum)
 {
-	pixnum = pnum;
+    pixnum = pnum;
 	FastLED.addLeds<NEOPIXEL, 3>(leds, pixnum);
+
+    neopixel_isInit = true;
+}
+
+void NeoPixel_setup(uint8_t pnum, bool grb)
+{
+	pixnum = pnum;
+    FastLED.addLeds<WS2811, 3, RGB>(leds, pixnum);
+
     neopixel_isInit = true;
 }
 

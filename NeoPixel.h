@@ -11,6 +11,9 @@ enum Colors { BrightRed = 16711680, Black = 0, Green = 32768, Lime = 65280, Oran
 // sets up the NeoPixel strip
 void NeoPixel_setup(uint8_t pnum);
 
+// sets up the NeoPixel strip in "new" mode, with rgb colors
+void NeoPixel_setup(uint8_t pnum, bool grb);
+
 // sets the strip to show progress
 void NeoPixel_progress(uint8_t level, uint32_t color);
 
