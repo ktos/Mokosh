@@ -1,0 +1,9 @@
+{
+    "ssid": "myssid",
+    "password": "mypassword",
+    "broker": "1.2.3.4",
+    "brokerPort": 1883,
+    "updateServer": "example.com",
+    "updatePort": 80,
+    "updatePath": "/update/MOKOSH-%s-dbg.bin"
+}
