@@ -13,7 +13,7 @@ void setup() {
     // will connect to MQTT broker at 192.168.1.10 at port 1883
     Mqtt_setup("192.168.1.10", 1883);
     char* host = WiFi_getHostString();
-    Mqtt_reconnect(host);
+    Mqtt_reconnect();
 
     // will publish to topic Mokosh_XXXXX/debug
     sprintf(debug_topic, "%s/debug", host);
