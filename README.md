@@ -1,6 +1,6 @@
 # Mokosh
 
-[![Build Status](https://dev.azure.com/ktos/Mokosh/_apis/build/status/Mokosh%20CI?branchName=master)](https://dev.azure.com/ktos/Mokosh/_build/latest?definitionId=11&branchName=master)
+[![Build Status](https://dev.azure.com/ktos/Mokosh/_apis/build/status/Mokosh%20Tag?branchName=master)](https://dev.azure.com/ktos/Mokosh/_build/latest?definitionId=12&branchName=master)
 
 Mokosh is a pseudo-framework, extracted from the "Chione" project, with a goal
 to be a simple set of a functions for easily built similarly operated IoT
@@ -13,8 +13,8 @@ This version of Mokosh is heavily in development.
 
 ## Usage
 
-Code is prepared for the Arduino platform, currently building on version 1.8.
-Prepared only for ESP8266, tested on NodeMCU and WeMos D1 R2.
+Code is prepared for the Arduino platform, building is tested on arduino-cli,
+currently 0.10. Prepared only for ESP8266, tested on NodeMCU and WeMos D1 R2.
 
 You have to just include the main file somewhere in the beginning of your
 Arduino sketch:
