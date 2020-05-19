@@ -28,7 +28,7 @@ Then you can just start using Mokosh functions.
 ### Dependencies
 The library is dependent on the following libraries:
 
-* [FastLED](https://github.com/FastLED/FastLED), 3.2.1,
+* [FastLED](https://github.com/FastLED/FastLED), 3.3.2,
 * [ArduinoJson](https://github.com/bblanchon/ArduinoJson), 5.13.4,
 * [PubSubClient](https://github.com/knolleary/pubsubclient), 2.7.0.
 
