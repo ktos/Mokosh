@@ -1,6 +1,6 @@
 # Mokosh
 
-[![Build status](https://dev.azure.com/ktos/Mokosh/_apis/build/status/Mokosh-CI)](https://dev.azure.com/ktos/Mokosh/_build/latest?definitionId=3)
+[![Build Status](https://dev.azure.com/ktos/Mokosh/_apis/build/status/Mokosh%20CI?branchName=master)](https://dev.azure.com/ktos/Mokosh/_build/latest?definitionId=11&branchName=master)
 
 Mokosh is a pseudo-framework, extracted from the "Chione" project, with a goal
 to be a simple set of a functions for easily built similarly operated IoT
