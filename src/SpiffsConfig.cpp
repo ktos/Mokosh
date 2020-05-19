@@ -2,16 +2,17 @@
 
 #include <ArduinoJson.h>
 #include <FS.h>
+#include <LittleFS.h>
 
 #include "Debug.h"
 #include "NeoPixel.h"
 
 bool SpiffsConfig_begin() {
-    return SPIFFS.begin();
+    return LittleFS.begin();
 }
 
 bool SpiffsConfig_exists() {
-    File configFile = SPIFFS.open("/config.json", "r");
+    File configFile = LittleFS.open("/config.json", "r");
 
     if (!configFile) {
         return false;
@@ -20,8 +21,8 @@ bool SpiffsConfig_exists() {
     }
 }
 
-bool SpiffsConfig_load(MokoshConfiguration *config) {
-    File configFile = SPIFFS.open("/config.json", "r");
+bool SpiffsConfig_load(MokoshConfiguration* config) {
+    File configFile = LittleFS.open("/config.json", "r");
 
     if (!configFile) {
         Debug_print(DLVL_ERROR, "CONFIG", "Cannot open config file");
@@ -43,17 +44,17 @@ bool SpiffsConfig_load(MokoshConfiguration *config) {
     configFile.readBytes(buf.get(), size);
 
     StaticJsonBuffer<300> jsonBuffer;
-    JsonObject &json = jsonBuffer.parseObject(buf.get());
+    JsonObject& json = jsonBuffer.parseObject(buf.get());
 
     if (!json.success()) {
         Debug_print(DLVL_ERROR, "CONFIG", "Failed to parse config file");
         return false;
     }
 
-    const char *ssid2 = json["ssid"];
-    const char *password2 = json["password"];
-    const char *broker2 = json["broker"];
-    const char *update2 = json["updateServer"];
+    const char* ssid2 = json["ssid"];
+    const char* password2 = json["password"];
+    const char* broker2 = json["broker"];
+    const char* update2 = json["updateServer"];
 
     memcpy(config->ssid, ssid2, 32);
     memcpy(config->password, password2, 32);
@@ -63,7 +64,7 @@ bool SpiffsConfig_load(MokoshConfiguration *config) {
     config->brokerPort = json["brokerPort"];
     config->updatePort = json["updatePort"];
 
-    const char *color = json["color"];
+    const char* color = json["color"];
     String color2 = color;
 
     if (color2.length() == 11) {
@@ -88,7 +89,7 @@ bool SpiffsConfig_load(MokoshConfiguration *config) {
 
 bool SpiffsConfig_update(MokoshConfiguration config) {
     StaticJsonBuffer<300> jsonBuffer;
-    JsonObject &json = jsonBuffer.createObject();
+    JsonObject& json = jsonBuffer.createObject();
 
     json["ssid"] = config.ssid;
     json["password"] = config.password;
@@ -99,7 +100,7 @@ bool SpiffsConfig_update(MokoshConfiguration config) {
     json["updatePath"] = config.updatePath;
     json["color"] = config.color;
 
-    File configFile = SPIFFS.open("/config.json", "w");
+    File configFile = LittleFS.open("/config.json", "w");
     if (!configFile) {
         Debug_print(DLVL_ERROR, "CONFIG", "Failed to write to config file");
         return false;
@@ -111,7 +112,7 @@ bool SpiffsConfig_update(MokoshConfiguration config) {
 
 void SpiffsConfig_prettyPrint(MokoshConfiguration config) {
     StaticJsonBuffer<300> jsonBuffer;
-    JsonObject &json = jsonBuffer.createObject();
+    JsonObject& json = jsonBuffer.createObject();
 
     json["ssid"] = config.ssid;
     json["password"] = config.password;
@@ -125,7 +126,7 @@ void SpiffsConfig_prettyPrint(MokoshConfiguration config) {
     json.prettyPrintTo(Serial);
 }
 
-void SpiffsConfig_updateField(MokoshConfiguration *config, const char *field, const char *value) {
+void SpiffsConfig_updateField(MokoshConfiguration* config, const char* field, const char* value) {
     Debug_print(DLVL_DEBUG, "CONFIG", "Changing");
     Debug_print(DLVL_DEBUG, "CONFIG", field);
     Debug_print(DLVL_DEBUG, "CONFIG", value);
@@ -170,5 +171,5 @@ void SpiffsConfig_updateField(MokoshConfiguration *config, const char *field, co
 }
 
 void SpiffsConfig_remove() {
-    SPIFFS.remove("/config.json");
+    LittleFS.remove("/config.json");
 }
