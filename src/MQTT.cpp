@@ -13,6 +13,8 @@ bool mqtt_isInit = false;
 WiFiClient client;
 PubSubClient mqtt(client);
 
+char cmd_topic[32] = { 0 };
+
 bool Mqtt_isInit()
 {
     return mqtt_isInit;
@@ -22,7 +24,7 @@ void Mqtt_setup(const char* broker, uint16_t port)
 {
 	Debug_print(DLVL_DEBUG, "MQTT", broker);
 	brokerAddress.fromString(broker);
-	brokerPort = port;
+	brokerPort = port;	
 
     mqtt_isInit = true;
 }
@@ -45,6 +47,10 @@ bool Mqtt_reconnect()
 
 			Debug_print(DLVL_DEBUG, "MQTT", "Subscribing");
 
+			char* hostname = WiFi_getHostString();
+			sprintf(cmd_topic, "%s/cmd", hostname);
+			Mqtt_subscribe(cmd_topic);
+
 			return true;
 		}
 		else {
@@ -58,7 +64,7 @@ bool Mqtt_reconnect()
 			// wait 5 seconds before retrying
 			delay(5000);
 		}
-	}
+	}	
 }
 
 void Mqtt_publish(const char* topic, String payload)

@@ -148,9 +148,9 @@ Handles MQTT subscription - receiving messages and commands.
 `void Mqtt_setup(const char* broker, uint16_t port)`
 Sets up the connection to a specific broker on a specific port.
 
-`bool Mqtt_reconnect(const char* hostString)`
+`bool Mqtt_reconnect()`
 Reconnects or connects to the broker and subscribe to the command topic, which
-is `hostString/cmd`.
+is `<hostString>/cmd`.
 
 `void Mqtt_publish(const char* topic, const char* payload)`
 Publishes any string message to the MQTT topic.

@@ -15,7 +15,6 @@ char rand_topic[32] = { 0 };
 
 char heartbeat_topic[32] = { 0 };
 char debug_topic[32] = { 0 };
-char cmd_topic[32] = { 0 };
 
 // when the last message was sent
 long lastMsg = 0;
@@ -91,9 +90,7 @@ void setup(void) {
 	sprintf(rand_topic, "%s/rand", hostname);
 	
 	sprintf(heartbeat_topic, "%s/debug/heartbeat", hostname);
-	sprintf(debug_topic, "%s/debug", hostname);
-	sprintf(cmd_topic, "%s/cmd", hostname);
-	Mqtt_subscribe(cmd_topic);
+	sprintf(debug_topic, "%s/debug", hostname);	
 
 	char version_topic[32];
 	sprintf(version_topic, "%s/version", hostname);
