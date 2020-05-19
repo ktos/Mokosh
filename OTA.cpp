@@ -6,7 +6,7 @@
 void handleOTA(Configuration config, const char* version)
 {
 	char uri[128];
-	sprintf(uri, config.otaPath, version);
+	sprintf(uri, config.updatePath, version);
 
 	Debug_print(DLVL_INFO, "OTA", "Starting OTA update");
 	Debug_print(DLVL_DEBUG, "OTA", config.updateServer);

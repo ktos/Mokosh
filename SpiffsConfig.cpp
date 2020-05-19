@@ -4,6 +4,10 @@
 #include "Debug.h"
 #include "NeoPixel.h"
 
+bool SpiffsConfig_begin() {
+	return SPIFFS.begin();
+}
+
 bool SpiffsConfig_exists() {
 	File configFile = SPIFFS.open("/config.json", "r");
 
@@ -15,7 +19,7 @@ bool SpiffsConfig_exists() {
 	}
 }
 
-bool SpiffsConfig_load(Configuration* config)
+bool SpiffsConfig_load(MokoshConfiguration* config)
 {
 	File configFile = SPIFFS.open("/config.json", "r");
 
@@ -78,12 +82,12 @@ bool SpiffsConfig_load(Configuration* config)
 	Debug_print(DLVL_DEBUG, "CONFIG", config->broker);
 	Debug_print(DLVL_DEBUG, "CONFIG", config->brokerPort);	
 	Debug_print(DLVL_DEBUG, "CONFIG", config->color);
-	Debug_print(DLVL_DEBUG, "CONFIG", config->otaPath);
+	Debug_print(DLVL_DEBUG, "CONFIG", config->updatePath);
 
 	return true;
 }
 
-bool SpiffsConfig_update(Configuration config)
+bool SpiffsConfig_update(MokoshConfiguration config)
 {
 	StaticJsonBuffer<300> jsonBuffer;
 	JsonObject& json = jsonBuffer.createObject();
@@ -91,11 +95,10 @@ bool SpiffsConfig_update(Configuration config)
 	json["ssid"] = config.ssid;
 	json["password"] = config.password;
 	json["broker"] = config.broker;
-	json["brokerPort"] = config.brokerPort;	
-	json["weightScale"] = config.weightScale;
+	json["brokerPort"] = config.brokerPort;		
 	json["updateServer"] = config.updateServer;
 	json["updatePort"] = config.updatePort;
-	json["otaPath"] = config.otaPath;
+	json["updatePath"] = config.updatePath;
 	json["color"] = config.color;
 
 	File configFile = SPIFFS.open("/config.json", "w");
@@ -108,7 +111,7 @@ bool SpiffsConfig_update(Configuration config)
 	return true;
 }
 
-void SpiffsConfig_prettyPrint(Configuration config)
+void SpiffsConfig_prettyPrint(MokoshConfiguration config)
 {
 	StaticJsonBuffer<300> jsonBuffer;
 	JsonObject& json = jsonBuffer.createObject();
@@ -120,12 +123,12 @@ void SpiffsConfig_prettyPrint(Configuration config)
 	json["updateServer"] = config.updateServer;
 	json["updatePort"] = config.updatePort;
 	json["color"] = config.color;
-	json["otaPath"] = config.otaPath;
+	json["updatePath"] = config.updatePath;
 
 	json.prettyPrintTo(Serial);	
 }
 
-void SpiffsConfig_updateField(Configuration* config, const char* field, const char* value)
+void SpiffsConfig_updateField(MokoshConfiguration* config, const char* field, const char* value)
 {
 	Debug_print(DLVL_DEBUG, "CONFIG", "Changing");
 	Debug_print(DLVL_DEBUG, "CONFIG", field);
@@ -155,8 +158,8 @@ void SpiffsConfig_updateField(Configuration* config, const char* field, const ch
 		config->updatePort = String(value).toInt();
 	}	
 
-	if (strcmp(field, "otaPath") == 0) {
-		strcpy(config->otaPath, value);
+	if (strcmp(field, "updatePath") == 0) {
+		strcpy(config->updatePath, value);
 	}
 
 	if (strcmp(field, "color") == 0) {
