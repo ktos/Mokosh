@@ -106,7 +106,7 @@ void handleReboot() {
     ESP.restart();
 }
 
-void FirstRun_start(char *prefix) {
+void FirstRun_start(const char *prefix) {
     sprintf(ssid, "%s_%06X", prefix, ESP.getChipId());
 
     WiFi.softAP(ssid);

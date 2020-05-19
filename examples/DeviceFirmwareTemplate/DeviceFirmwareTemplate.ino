@@ -133,6 +133,10 @@ void setup(void) {
 
 // function run when new message from the MQTT is sent
 void onCommand(char *topic, uint8_t *message, unsigned int length) {
+    if (strstr(topic, "cmd") == NULL) {
+        return;
+    }
+
     char msg[32] = {0};
     for (unsigned int i = 0; i < length; i++) {
         msg[i] = message[i];

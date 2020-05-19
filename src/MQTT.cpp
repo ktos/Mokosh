@@ -61,6 +61,8 @@ bool Mqtt_reconnect() {
             delay(5000);
         }
     }
+
+    return false;
 }
 
 void Mqtt_publish(const char *topic, String payload) {
