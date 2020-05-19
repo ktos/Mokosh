@@ -1,7 +1,9 @@
 #define FASTLED_ESP8266_RAW_PIN_ORDER
 #include "NeoPixel.h"
-#include "Debug.h"
+
 #include <FastLED.h>
+
+#include "Debug.h"
 
 #ifdef ENABLE_NEOPIXEL
 
@@ -10,49 +12,44 @@ uint8_t pixnum;
 
 bool neopixel_isInit = false;
 
-void NeoPixel_setup(uint8_t pnum)
-{
+void NeoPixel_setup(uint8_t pnum) {
     pixnum = pnum;
-	FastLED.addLeds<NEOPIXEL, 3>(leds, pixnum);
+    FastLED.addLeds<NEOPIXEL, 3>(leds, pixnum);
 
     neopixel_isInit = true;
 }
 
-void NeoPixel_setup(uint8_t pnum, bool grb)
-{
-	pixnum = pnum;
+void NeoPixel_setup(uint8_t pnum, bool grb) {
+    pixnum = pnum;
     FastLED.addLeds<WS2811, 3, RGB>(leds, pixnum);
 
     neopixel_isInit = true;
 }
 
-void NeoPixel_progress(uint8_t level, uint32_t color)
-{
+void NeoPixel_progress(uint8_t level, uint32_t color) {
     if (!neopixel_isInit) {
         Debug_print(DLVL_WARNING, "MOKOSH", "NeoPixel is not initialized");
         return;
     }
 
-	level = level % pixnum;
+    level = level % pixnum;
 
-	for (uint8_t i = 0; i < level; i++)
-		leds[i].setColorCode(color);
+    for (uint8_t i = 0; i < level; i++)
+        leds[i].setColorCode(color);
 
-	FastLED.show();
+    FastLED.show();
 }
 
-void NeoPixel_color(uint32_t color)
-{
+void NeoPixel_color(uint32_t color) {
     if (!neopixel_isInit) {
         Debug_print(DLVL_WARNING, "MOKOSH-NEOPIXEL", "NeoPixel is not initialized");
         return;
     }
 
-	FastLED.showColor(CRGB(color));
+    FastLED.showColor(CRGB(color));
 }
 
-void NeoPixel_error(uint16_t errorCode)
-{
+void NeoPixel_error(uint16_t errorCode) {
     if (!neopixel_isInit) {
         Debug_print(DLVL_WARNING, "MOKOSH-NEOPIXEL", "NeoPixel is not initialized");
         return;
@@ -120,7 +117,7 @@ void NeoPixel_error(uint16_t errorCode)
             leds[0] = CRGB::Yellow;
     }
 
-	FastLED.show();
+    FastLED.show();
 }
 
 /*
@@ -129,94 +126,87 @@ void NeoPixel_error(uint16_t errorCode)
 * Inspired by the Adafruit examples.
 */
 uint32_t color_wheel(uint8_t pos) {
-	pos = 255 - pos;
-	if (pos < 85) {
-		return ((uint32_t)(255 - pos * 3) << 16) | ((uint32_t)(0) << 8) | (pos * 3);
-	}
-	else if (pos < 170) {
-		pos -= 85;
-		return ((uint32_t)(0) << 16) | ((uint32_t)(pos * 3) << 8) | (255 - pos * 3);
-	}
-	else {
-		pos -= 170;
-		return ((uint32_t)(pos * 3) << 16) | ((uint32_t)(255 - pos * 3) << 8) | (0);
-	}
+    pos = 255 - pos;
+    if (pos < 85) {
+        return ((uint32_t)(255 - pos * 3) << 16) | ((uint32_t)(0) << 8) | (pos * 3);
+    } else if (pos < 170) {
+        pos -= 85;
+        return ((uint32_t)(0) << 16) | ((uint32_t)(pos * 3) << 8) | (255 - pos * 3);
+    } else {
+        pos -= 170;
+        return ((uint32_t)(pos * 3) << 16) | ((uint32_t)(255 - pos * 3) << 8) | (0);
+    }
 }
 
-void NeoPixel_anim(Anim type, uint32_t color)
-{
+void NeoPixel_anim(Anim type, uint32_t color) {
     if (!neopixel_isInit) {
         Debug_print(DLVL_WARNING, "MOKOSH-NEOPIXEL", "NeoPixel is not initialized");
         return;
     }
 
-	switch (type)
-	{
-	case KnightRider1:
-		for (uint8_t i = 0; i < pixnum; i++) {
-			leds[i].setColorCode(color);
-			FastLED.show();
+    switch (type) {
+        case KnightRider1:
+            for (uint8_t i = 0; i < pixnum; i++) {
+                leds[i].setColorCode(color);
+                FastLED.show();
 
-			delay(50);
-			leds[i] = CRGB::Black;
-			FastLED.show();
-		}
-		leds[pixnum - 1].setColorCode(color);
-		FastLED.show();
-		break;
+                delay(50);
+                leds[i] = CRGB::Black;
+                FastLED.show();
+            }
+            leds[pixnum - 1].setColorCode(color);
+            FastLED.show();
+            break;
 
-	case KnightRider2:
-		for (uint8_t i = pixnum - 1; i > 0; i--) {
-			leds[i].setColorCode(color);
-			FastLED.show();
+        case KnightRider2:
+            for (uint8_t i = pixnum - 1; i > 0; i--) {
+                leds[i].setColorCode(color);
+                FastLED.show();
 
-			delay(50);
-			leds[i] = CRGB::Black;
-			FastLED.show();
-		}
-		leds[0].setColorCode(color);
-		FastLED.show();
-		break;
+                delay(50);
+                leds[i] = CRGB::Black;
+                FastLED.show();
+            }
+            leds[0].setColorCode(color);
+            FastLED.show();
+            break;
 
+        case RainbowCycle:
+            int j = 0;
 
-	case RainbowCycle:
-		int j = 0;
+            while (j < 255) {
+                for (uint16_t i = 0; i < pixnum; i++) {
+                    uint32_t color = color_wheel(((i * 256 / pixnum) + j) & 0xFF);
+                    leds[i].setColorCode(color);
+                }
 
-		while (j < 255) {
-			for (uint16_t i = 0; i < pixnum; i++) {
-				uint32_t color = color_wheel(((i * 256 / pixnum) + j) & 0xFF);
-				leds[i].setColorCode(color);
-			}
+                j = (j + 1) & 0xFF;
+                FastLED.show();
+                delay(1);
+            }
 
-			j = (j + 1) & 0xFF;
-			FastLED.show();
-			delay(1);
-		}
-
-		break;
-	}
+            break;
+    }
 }
 
-void NeoPixel_animtime(Anim type, uint32_t color, uint16_t time)
-{
+void NeoPixel_animtime(Anim type, uint32_t color, uint16_t time) {
     if (!neopixel_isInit) {
         Debug_print(DLVL_WARNING, "MOKOSH-NEOPIXEL", "NeoPixel is not initialized");
         return;
     }
 
-	unsigned long start = millis();
+    unsigned long start = millis();
 
-	while (true) {
-		NeoPixel_anim(type, color);
+    while (true) {
+        NeoPixel_anim(type, color);
 
-		if (millis() - start > time)
-			break;
-	}
+        if (millis() - start > time)
+            break;
+    }
 }
 
 #endif
 
-uint32_t NeoPixel_convertColorToCode(int r, int g, int b)
-{
-	return ((uint32_t)r << 16) | ((uint32_t)g << 8) | b;
+uint32_t NeoPixel_convertColorToCode(int r, int g, int b) {
+    return ((uint32_t)r << 16) | ((uint32_t)g << 8) | b;
 }

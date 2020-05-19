@@ -7,8 +7,19 @@
 
 #ifdef ENABLE_NEOPIXEL
 
-enum Anim { KnightRider1, KnightRider2, RainbowCycle };
-enum Colors { BrightRed = 16711680, Black = 0, Green = 32768, Lime = 65280, Orange = 0xFF3000 };
+enum Anim {
+    KnightRider1,
+    KnightRider2,
+    RainbowCycle
+};
+
+enum Colors {
+    BrightRed = 16711680,
+    Black = 0,
+    Green = 32768,
+    Lime = 65280,
+    Orange = 0xFF3000
+};
 
 // sets up the NeoPixel strip
 void NeoPixel_setup(uint8_t pnum);

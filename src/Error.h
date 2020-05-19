@@ -26,4 +26,3 @@ void Error_configure(bool useBuiltInLed, bool useNeoPixel);
 void Error_show(uint16_t errorCode);
 
 #endif
-

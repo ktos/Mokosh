@@ -12,17 +12,16 @@ void Debug_init(uint8_t minlevel);
 
 uint8_t Debug_currentLevel();
 
-void Debug_print(uint8_t level, const char* topic, const char* message);
+void Debug_print(uint8_t level, const char *topic, const char *message);
 
-void Debug_print(uint8_t level, const char* topic, String message);
+void Debug_print(uint8_t level, const char *topic, String message);
 
-void Debug_print(uint8_t level, const char* topic, float value);
+void Debug_print(uint8_t level, const char *topic, float value);
 
-void Debug_print(uint8_t level, const char* topic, int value);
+void Debug_print(uint8_t level, const char *topic, int value);
 
-void Debug_print(uint8_t level, const char* topic, uint32_t value);
+void Debug_print(uint8_t level, const char *topic, uint32_t value);
 
 bool Debug_isInit();
 
 #endif
-

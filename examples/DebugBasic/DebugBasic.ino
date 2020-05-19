@@ -1,10 +1,12 @@
 #include <Mokosh.h>
 
-void setup() {
-    Debug_init(DLVL_INFO);    
+void setup()
+{
+    Debug_init(DLVL_INFO);
 }
 
-void loop() {
+void loop()
+{
     // won't be shown, as minimal debug level is INFO
     Debug_print(DLVL_DEBUG, "Topic", "Some debug information");
 

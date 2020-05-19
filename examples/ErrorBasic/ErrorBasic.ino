@@ -6,7 +6,7 @@ void setup() {
 }
 
 void loop() {
-    // will "blink out" the ERROR_CONFIG 
+    // will "blink out" the ERROR_CONFIG
     Error_show(ERROR_CONFIG);
 
     delay(1000);

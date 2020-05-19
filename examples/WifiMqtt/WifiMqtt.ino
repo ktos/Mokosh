@@ -1,6 +1,6 @@
 #include <Mokosh.h>
 
-char debug_topic[32] = { 0 };
+char debug_topic[32] = {0};
 
 void setup() {
     srand(millis());
@@ -12,7 +12,7 @@ void setup() {
 
     // will connect to MQTT broker at 192.168.1.10 at port 1883
     Mqtt_setup("192.168.1.10", 1883);
-    char* host = WiFi_getHostString();
+    char *host = WiFi_getHostString();
     Mqtt_reconnect();
 
     // will publish to topic Mokosh_XXXXX/debug
@@ -38,14 +38,12 @@ void loop() {
     Mqtt_loop();
 }
 
-void onCommand(char* topic, uint8_t* message, unsigned int length)
-{
-	char msg[32] = { 0 };
-	for (unsigned int i = 0; i < length; i++)
-	{
-		msg[i] = message[i];
-	}
-	msg[length + 1] = 0;
+void onCommand(char *topic, uint8_t *message, unsigned int length) {
+    char msg[32] = {0};
+    for (unsigned int i = 0; i < length; i++) {
+        msg[i] = message[i];
+    }
+    msg[length + 1] = 0;
 
-	Debug_print(DLVL_DEBUG, "I received command!", msg);
+    Debug_print(DLVL_DEBUG, "I received command!", msg);
 }

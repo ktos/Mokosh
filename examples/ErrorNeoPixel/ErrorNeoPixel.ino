@@ -1,6 +1,6 @@
 #define ENABLE_NEOPIXEL
-#include <Mokosh.h>
 #include <FastLED.h>
+#include <Mokosh.h>
 
 void setup() {
     // use built-in LED, not NeoPixel strip
