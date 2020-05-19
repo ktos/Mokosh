@@ -57,12 +57,7 @@ bool SpiffsConfig_load(Configuration* config)
 	memcpy(config->updateServer, update2, 32);
 
 	config->brokerPort = json["brokerPort"];
-	config->updatePort = json["updatePort"];
-
-	config->diffTemp = json["diffTemp"];
-	config->diffHumid = json["diffHumid"];
-	config->diffWeight = json["diffWeight"];
-	config->weightScale = json["weightScale"];
+	config->updatePort = json["updatePort"];	
 
 	const char* color = json["color"];
 	String color2 = color;
@@ -81,12 +76,9 @@ bool SpiffsConfig_load(Configuration* config)
 	Debug_print(DLVL_DEBUG, "CONFIG", config->ssid);
 	Debug_print(DLVL_DEBUG, "CONFIG", config->password);
 	Debug_print(DLVL_DEBUG, "CONFIG", config->broker);
-	Debug_print(DLVL_DEBUG, "CONFIG", config->brokerPort);
-	Debug_print(DLVL_DEBUG, "CONFIG", config->diffTemp);
-	Debug_print(DLVL_DEBUG, "CONFIG", config->diffHumid);
-	Debug_print(DLVL_DEBUG, "CONFIG", config->diffWeight);
-	Debug_print(DLVL_DEBUG, "CONFIG", config->weightScale);
+	Debug_print(DLVL_DEBUG, "CONFIG", config->brokerPort);	
 	Debug_print(DLVL_DEBUG, "CONFIG", config->color);
+	Debug_print(DLVL_DEBUG, "CONFIG", config->otaPath);
 
 	return true;
 }
@@ -99,13 +91,11 @@ bool SpiffsConfig_update(Configuration config)
 	json["ssid"] = config.ssid;
 	json["password"] = config.password;
 	json["broker"] = config.broker;
-	json["brokerPort"] = config.brokerPort;
-	json["diffTemp"] = config.diffTemp;
-	json["diffHumid"] = config.diffHumid;
-	json["diffWeight"] = config.diffWeight;
+	json["brokerPort"] = config.brokerPort;	
 	json["weightScale"] = config.weightScale;
 	json["updateServer"] = config.updateServer;
 	json["updatePort"] = config.updatePort;
+	json["otaPath"] = config.otaPath;
 	json["color"] = config.color;
 
 	File configFile = SPIFFS.open("/config.json", "w");
@@ -126,14 +116,11 @@ void SpiffsConfig_prettyPrint(Configuration config)
 	json["ssid"] = config.ssid;
 	json["password"] = config.password;
 	json["broker"] = config.broker;
-	json["brokerPort"] = config.brokerPort;
-	json["diffTemp"] = config.diffTemp;
-	json["diffHumid"] = config.diffHumid;
-	json["diffWeight"] = config.diffWeight;
-	json["weightScale"] = config.weightScale;
+	json["brokerPort"] = config.brokerPort;	
 	json["updateServer"] = config.updateServer;
 	json["updatePort"] = config.updatePort;
 	json["color"] = config.color;
+	json["otaPath"] = config.otaPath;
 
 	json.prettyPrintTo(Serial);	
 }
@@ -166,22 +153,10 @@ void SpiffsConfig_updateField(Configuration* config, const char* field, const ch
 
 	if (strcmp(field, "updatePort") == 0) {
 		config->updatePort = String(value).toInt();
-	}
+	}	
 
-	if (strcmp(field, "diffTemp") == 0) {
-		config->diffTemp = String(value).toFloat();
-	}
-
-	if (strcmp(field, "diffHumid") == 0) {
-		config->diffHumid = String(value).toFloat();
-	}
-
-	if (strcmp(field, "diffWeight") == 0) {
-		config->diffWeight = String(value).toFloat();
-	}
-
-	if (strcmp(field, "weightScale") == 0) {
-		config->weightScale = String(value).toFloat();
+	if (strcmp(field, "otaPath") == 0) {
+		strcpy(config->otaPath, value);
 	}
 
 	if (strcmp(field, "color") == 0) {

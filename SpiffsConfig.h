@@ -11,10 +11,7 @@ typedef struct Configuration {
 	char broker[32];
 	uint16_t brokerPort;
 	char updateServer[32];
-	uint16_t updatePort;
-	float diffTemp;
-	float diffHumid;
-	float diffWeight;
+	uint16_t updatePort;	
 	float weightScale;
 	uint32_t color;
 	char otaPath[32];

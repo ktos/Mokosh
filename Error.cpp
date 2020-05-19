@@ -21,7 +21,9 @@ void Error_showBlinking(uint16_t errorCode)
 	if (errorUseNeoPixel) {
 		Debug_print(DLVL_ERROR, "ERROR", errorCode);
 
+#ifdef ENABLE_NEOPIXEL
 		NeoPixel_error(errorCode);
+#endif
 		delay(60000);
 	}
 	else {

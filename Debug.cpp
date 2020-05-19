@@ -1,7 +1,3 @@
-//
-//
-//
-
 #include "Debug.h"
 
 uint8_t minlevel;

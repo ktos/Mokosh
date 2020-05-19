@@ -1,5 +1,3 @@
-// Debug.h
-
 #ifndef _DEBUG_h
 #define _DEBUG_h
 

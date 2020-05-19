@@ -3,6 +3,8 @@
 #include "Debug.h"
 #include <FastLED.h>
 
+#ifdef ENABLE_NEOPIXEL
+
 CRGB leds[16];
 uint8_t pixnum;
 
@@ -22,11 +24,6 @@ void NeoPixel_setup(uint8_t pnum, bool grb)
     FastLED.addLeds<WS2811, 3, RGB>(leds, pixnum);
 
     neopixel_isInit = true;
-}
-
-uint32_t NeoPixel_convertColorToCode(int r, int g, int b)
-{
-	return ((uint32_t)r << 16) | ((uint32_t)g << 8) | b;
 }
 
 void NeoPixel_progress(uint8_t level, uint32_t color)
@@ -215,4 +212,11 @@ void NeoPixel_animtime(Anim type, uint32_t color, uint16_t time)
 		if (millis() - start > time)
 			break;
 	}
+}
+
+#endif
+
+uint32_t NeoPixel_convertColorToCode(int r, int g, int b)
+{
+	return ((uint32_t)r << 16) | ((uint32_t)g << 8) | b;
 }

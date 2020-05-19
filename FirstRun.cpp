@@ -1,7 +1,3 @@
-// 
-// 
-// 
-
 #include "FirstRun.h"
 
 #include <WiFiClient.h> 
@@ -24,7 +20,7 @@ void FirstRun_configure(const char* _version, const char* _informationalVersion,
 
 
 void handleRoot() {
-	server.send(200, "text/plain", "Hi, I'm Chione.");
+	server.send(200, "text/plain", "Hi, I'm Mokosh.");
 }
 
 File fsUploadFile;

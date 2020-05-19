@@ -5,6 +5,8 @@
 
 #include "Arduino.h"
 
+#ifdef ENABLE_NEOPIXEL
+
 enum Anim { KnightRider1, KnightRider2, RainbowCycle };
 enum Colors { BrightRed = 16711680, Black = 0, Green = 32768, Lime = 65280, Orange = 0xFF3000 };
 
@@ -28,6 +30,8 @@ void NeoPixel_anim(Anim type, uint32_t color);
 
 // animates the LED strip
 void NeoPixel_animtime(Anim type, uint32_t color, uint16_t time);
+
+#endif
 
 // converts the r, g and b values to uint32_t color code
 uint32_t NeoPixel_convertColorToCode(int r, int g, int b);
