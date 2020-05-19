@@ -16,10 +16,7 @@ This version of Mokosh is heavily in development.
 Code is prepared for the Arduino platform, currently building on version 1.8.
 Prepared only for ESP8266, tested on NodeMCU and WeMos D1 R2.
 
-To build a Mokosh-based application, you have to define a a compilation flag:
-* `ENABLE_NEOPIXEL` will enable showing errors using the NeoPixel strip.
-
-And you have to just include the main file somewhere in the beginning of your
+You have to just include the main file somewhere in the beginning of your
 Arduino sketch:
 
 ```cpp
@@ -33,8 +30,7 @@ The library is dependent on the following libraries:
 
 * [FastLED](https://github.com/FastLED/FastLED), 3.2.1,
 * [ArduinoJson](https://github.com/bblanchon/ArduinoJson), 5.13.4,
-* [PubSubClient](https://github.com/knolleary/pubsubclient), 2.7.0,
-* [EspSaveCrash](https://github.com/krzychb/EspSaveCrash), 1.0.2.
+* [PubSubClient](https://github.com/knolleary/pubsubclient), 2.7.0.
 
 ## Structure
 
@@ -212,7 +208,7 @@ For example:
 ```cpp
 // config->updateServer is example.com
 // config->updatePort is 80
-// config->otaPath is /firmware/%s.bin
+// config->updatePath is /firmware/%s.bin
 
 handleOTA(config, "1.0"); // will download file from http://example.com:80/firmware/1.0.bin
 ```
@@ -236,8 +232,7 @@ the application is saved in the SPIFFS in `data/` directory, in the file
 Configuration is used to set MQTT broker, port, OTA update server address and
 similar information.
 
-The configuration system is currently tightly coupled to the Chione project,
-and will be overhauled in the near future.
+The configuration system is only for internal elements of Mokosh.
 
 ### WifiConnect.h
 Is responsible for connecting to the wireless network.
