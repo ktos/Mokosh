@@ -9,15 +9,36 @@ static Mokosh* _instance;
 
 RemoteDebug Debug;
 
+MokoshConfiguration create_configuration(const char* ssid, const char* password, const char* broker, uint16_t brokerPort, const char* updateServer, uint16_t updatePort, const char* updatePath) {
+    MokoshConfiguration mc;
+
+    strcpy(mc.ssid, ssid);
+    strcpy(mc.password, password);
+    strcpy(mc.broker, broker);
+    mc.brokerPort = brokerPort;
+    strcpy(mc.updateServer, updateServer);
+    mc.updatePort = updatePort;
+    strcpy(mc.updatePath, updatePath);
+
+    return mc;
+}
+
 Mokosh::Mokosh() {
     _instance = this;
-    this->debugLevel = Debug.WARNING;
+    this->debugReady = false;
+}
+
+void Mokosh::setConfiguration(MokoshConfiguration config) {
+    this->config = config;
 }
 
 void Mokosh::begin(String prefix) {
     Serial.begin(115200);
+    Serial.println();
+    Serial.println();
     Serial.print("Hi, I'm ");
-    Serial.println(prefix);
+    Serial.print(prefix);
+    Serial.println(".");
 
     char hostString[16] = {0};
     sprintf(hostString, "%06X", ESP.getChipId());
@@ -26,62 +47,73 @@ void Mokosh::begin(String prefix) {
     this->hostName = String(hostString);
     strcpy(this->hostNameC, hostName.c_str());
 
-    if (!LittleFS.begin()) {
-        this->error(Mokosh::Error_SPIFFS);
-    }
+    if (this->isFSEnabled) {
+        if (!LittleFS.begin()) {
+            this->error(Mokosh::Error_FS);
+        }
 
-    if (this->config == nullptr) {
-        if (!this->configLoad()) {
-            if (this->isFirstRunEnabled) {
-                // first run
-            } else {
-                this->error(Mokosh::Error_CONFIG);
+        if (this->isConfigurationSet()) {
+            if (!this->configLoad()) {
+                if (this->isFirstRunEnabled) {
+                    // first run
+                    // TODO: first run mode
+                    this->error(Mokosh::Error_NOTIMPLEMENTED);
+                } else {
+                    this->error(Mokosh::Error_CONFIG);
+                }
             }
         }
     }
 
+    if (this->isConfigurationSet()) {
+        this->error(Mokosh::Error_CONFIG);
+    }
+
     if (this->connectWifi()) {
-        Debug.begin(this->hostName, this->debugLevel);
+        Debug.begin(this->hostName, (uint8_t)this->debugLevel);
         Debug.setSerialEnabled(true);
         debugI("IP: %s", WiFi.localIP().toString().c_str());
     } else {
         this->error(Mokosh::Error_WIFI);
     }
 
-    //this->mqtt(this->client); // what the fuck?
+    this->client = new WiFiClient();
+    this->mqtt = new PubSubClient(*(this->client));
 
-    this->brokerAddress.fromString(this->config->broker);
-    this->brokerPort = this->config->brokerPort;
+    IPAddress broker;
+    broker.fromString(this->config.broker);
 
-    sprintf(this->cmd_topic, "%s/cmd", this->hostNameC);
-    sprintf(this->version_topic, "%s/version", this->hostNameC);
-    sprintf(this->debug_topic, "%s/debug", this->hostNameC);
-    sprintf(this->heartbeat_topic, "%s/debug/heartbeat", this->hostNameC);
-
-    mqtt.setServer(this->brokerAddress, this->brokerPort);
-    debugV("MQTT server set to %s port %d", this->brokerAddress.toString().c_str(), this->brokerPort);
+    this->mqtt->setServer(broker, this->config.brokerPort);
+    debugV("MQTT server set to %s port %d", broker.toString().c_str(), this->config.brokerPort);
 
     if (!this->reconnect()) {
         this->error(Mokosh::Error_MQTT);
     }
 
+    debugV("Sending hello");
+    this->publish(this->version_topic.c_str(), VERSION);
+
     debugI("Starting operations...");
+}
+
+void Mokosh::disableFS() {
+    this->isFSEnabled = false;
 }
 
 bool Mokosh::reconnect() {
     uint8_t trials = 0;
 
-    while (!client.connected()) {
+    while (!client->connected()) {
         trials++;
-        if (this->mqtt.connect(this->hostNameC)) {
+        if (this->mqtt->connect(this->hostNameC)) {
             debugI("MQTT reconnected");
 
-            this->mqtt.subscribe(this->cmd_topic);
+            this->mqtt->subscribe(this->cmd_topic.c_str());
             //this->mqtt.setCallback(this->onCommand); ??? // TODO: setCallback, how?
 
             return true;
         } else {
-            debugE("MQTT failed: %d", mqtt.state());
+            debugE("MQTT failed: %d", mqtt->state());
 
             // if not connected in the third trial, give up
             if (trials > 3)
@@ -95,14 +127,18 @@ bool Mokosh::reconnect() {
     return false;
 }
 
-PubSubClient& Mokosh::getPubSubClient() {
+PubSubClient* Mokosh::getPubSubClient() {
     return this->mqtt;
+}
+
+bool Mokosh::isConfigurationSet() {
+    return strcmp(this->config.ssid, "") == 0;
 }
 
 bool Mokosh::connectWifi() {
     WiFi.enableAP(0);
     WiFi.hostname(this->hostNameC);
-    WiFi.begin(this->config->ssid, this->config->password);
+    WiFi.begin(this->config.ssid, this->config.password);
 
     unsigned long startTime = millis();
     while (WiFi.status() != WL_CONNECTED && millis() - startTime < 10000) {
@@ -128,13 +164,30 @@ bool Mokosh::configExists() {
     }
 }
 
-void Mokosh::setDebugLevel(uint8_t level) {
+void Mokosh::setDebugLevel(DebugLevel level) {
     this->debugLevel = level;
 }
 
 void Mokosh::loop() {
-    this->mqtt.loop();
+    this->mqtt->loop();
     Debug.handle();
+}
+
+bool Mokosh::configLoad() {
+    File configFile = LittleFS.open("/config.json", "r");
+
+    if (!configFile) {
+        debugE("Cannot open config.json file");
+        return false;
+    }
+
+    size_t size = configFile.size();
+    if (size > 1024) {
+        debugE("Config file too large");
+        return false;
+    }
+
+    // TODO: parsing config file
 }
 
 // bool Mokosh::configLoad(MokoshConfiguration* config) {
@@ -306,13 +359,13 @@ void Mokosh::onCommand(char* topic, uint8_t* message, unsigned int length) {
     debugV("Command: %s", msg);
 
     if (strcmp(msg, "gver") == 0) {
-        this->publish(version_topic, VERSION);
+        this->publish(version_topic.c_str(), VERSION);
 
         return;
     }
 
     if (strcmp(msg, "getfullver") == 0) {
-        this->publish(debug_topic, INFORMATIONAL_VERSION);
+        this->publish(debug_topic.c_str(), INFORMATIONAL_VERSION);
 
         return;
     }
@@ -320,13 +373,13 @@ void Mokosh::onCommand(char* topic, uint8_t* message, unsigned int length) {
     if (strcmp(msg, "gmd5") == 0) {
         char md5[128];
         ESP.getSketchMD5().toCharArray(md5, 128);
-        this->publish(debug_topic, md5);
+        this->publish(debug_topic.c_str(), md5);
 
         return;
     }
 
     if (strcmp(msg, "getbuilddate") == 0) {
-        this->publish(debug_topic, BUILD_DATE);
+        this->publish(debug_topic.c_str(), BUILD_DATE);
 
         return;
     }
@@ -389,9 +442,9 @@ void Mokosh::publish(const char* subtopic, String payload) {
 
 void Mokosh::publish(const char* subtopic, const char* payload) {
     char topic[60] = {0};
-    sprintf(topic, "%s/%s", this->hostNameC, subtopic);
+    sprintf(topic, "%s_%s/%s", this->prefix.c_str(), this->hostNameC, subtopic);
 
-    this->mqtt.publish(topic, payload);
+    this->mqtt->publish(topic, payload);
 }
 
 void Mokosh::publish(const char* subtopic, float payload) {
@@ -403,11 +456,11 @@ void Mokosh::publish(const char* subtopic, float payload) {
 
 void Mokosh::handleOta(char* version) {
     char uri[128];
-    sprintf(uri, this->config->updatePath, version);
+    sprintf(uri, this->config.updatePath, version);
 
     debugI("Starting OTA update to version %s", version);
 
-    t_httpUpdate_return ret = ESPhttpUpdate.update(this->config->updateServer, this->config->updatePort, uri);
+    t_httpUpdate_return ret = ESPhttpUpdate.update(this->config.updateServer, this->config.updatePort, uri);
 
     if (ret == HTTP_UPDATE_FAILED) {
         debugW("OTA update failed");
@@ -415,14 +468,36 @@ void Mokosh::handleOta(char* version) {
 }
 
 void Mokosh::error(int code) {
-    debugE("Critical error: %d", code);
+    if (this->debugReady) {
+        debugE("Critical error: %d", code);
+    } else {
+        Serial.print("Critical error: ");
+        Serial.print(code);
+        Serial.println(", debug not ready.");
+    }
 
     if (this->errorHandler != nullptr) {
         this->errorHandler(code);
     } else {
-        while (true)
-            ;
+        if (this->isRebootOnError) {
+            delay(10000);
+            ESP.reset();
+        } else {
+            if (this->debugReady) {
+                debugD("Going loop.");
+            } else {
+                Serial.print("Going loop.");
+            }
+
+            while (true) {
+                delay(10);
+            }
+        }
     }
+}
+
+void Mokosh::enableRebootOnError() {
+    this->isRebootOnError = true;
 }
 
 /*

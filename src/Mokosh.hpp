@@ -8,13 +8,23 @@ using f_error_handler_t = void (*)(int);
 using f_command_handler_t = void (*)(uint8_t*, unsigned int);
 using f_interval_t = void (*)();
 
+typedef enum DebugLevel {
+    PROFILER = 0,
+	VERBOSE = 1,
+	DEBUG = 2,
+	INFO = 3,
+	WARNING = 4,
+	ERROR = 5,
+	ANY = 6
+} DebugLevel;
+
 class Mokosh {
    public:
     // Constructor
 
     Mokosh();
     void setConfiguration(MokoshConfiguration config);  // przed begin, jeśli trzeba
-    void setDebugLevel(uint8_t level);                  // przed begin, jeśli trzeba
+    void setDebugLevel(DebugLevel level);                  // przed begin, jeśli trzeba
     void begin(String prefix);
     void loop();
 
@@ -22,10 +32,12 @@ class Mokosh {
     void publish(const char* subtopic, const char* payload);
     void publish(const char* subtopic, float payload);
 
-    PubSubClient& getPubSubClient();
+    PubSubClient* getPubSubClient();
 
     void enableOTA();       // włącza obsługę polecenia OTA
-    void enableFirstRun();  // włącza tryb first run jezęli nie ma konfiguracji
+    void disableFS();       // wyłącza obsługę LittleFS
+    void enableFirstRun();  // włącza tryb first run jeżeli nie ma konfiguracji
+    void enableRebootOnError(); 
 
     void onCommand(f_command_handler_t handler);        // przed begin - callback który ma być odpalany na customową komendę
     void onError(f_error_handler_t handler);            // przed begin - callback który ma być odpalany na wypadek błędu
@@ -35,40 +47,42 @@ class Mokosh {
     void factoryReset();
 
     const uint8_t Error_CONFIG = 1;
-    const uint8_t Error_SPIFFS = 2;
+    const uint8_t Error_FS = 2;
     const uint8_t Error_WIFI = 3;
     const uint8_t Error_BROKER = 4;
     const uint8_t Error_MQTT = 5;
+    const uint8_t Error_NOTIMPLEMENTED = 6;
 
    private:
     f_error_handler_t errorHandler;
     f_command_handler_t commandHandler;
+    bool debugReady;
 
     String hostName;
     char hostNameC[32];
     String prefix;
-    MokoshConfiguration* config;
+    MokoshConfiguration config;
+    bool isConfigurationSet();
 
-    WiFiClient client;
-    PubSubClient mqtt;
-
-    IPAddress brokerAddress;
-    uint16_t brokerPort;
+    WiFiClient* client;
+    PubSubClient* mqtt;    
 
     bool isOtaEnabled = false;
     bool isFirstRunEnabled = false;
+    bool isFSEnabled = true;
+    bool isRebootOnError = false;
 
-    uint8_t debugLevel = 0;
+    DebugLevel debugLevel = DebugLevel::WARNING;
 
     bool configExists();
     bool configLoad();
     bool connectWifi();
     bool reconnect();
 
-    char cmd_topic[36];
-    char version_topic[36];
-    char debug_topic[36];
-    char heartbeat_topic[42];
+    const String cmd_topic = "cmd";
+    const String version_topic = "version";
+    const String debug_topic = "debug";
+    const String heartbeat_topic = "debug/heartbeat";
 
     void onCommand(char* topic, uint8_t* message, unsigned int length);
 
@@ -81,3 +95,5 @@ class Mokosh {
     char informationalVersion[100] = {0};
     char buildDate[11] = {0};
 };
+
+MokoshConfiguration create_configuration(const char* ssid, const char* password, const char* broker, uint16_t brokerPort, const char* updateServer,  uint16_t updatePort, const char* updatePath);

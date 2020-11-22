@@ -6,10 +6,9 @@ typedef struct MokoshConfiguration {
     char broker[32];
     uint16_t brokerPort;
     char updateServer[32];
-    uint16_t updatePort;
-    uint32_t color;
+    uint16_t updatePort;    
     char updatePath[32];
-} Configuration;
+} MokoshConfiguration;
 
 #ifndef VERSION
     #define VERSION "1.0.0"
