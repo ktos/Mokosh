@@ -1,14 +1,16 @@
 #include "Mokosh.hpp"
 
-#include <ESP8266WiFi.h>
 #include <ESP8266httpUpdate.h>
 #include <LittleFS.h>
-#include <RemoteDebug.h>
 
 static Mokosh* _instance;
 
 void _mqtt_callback(char* topic, uint8_t* message, unsigned int length) {
     _instance->mqttCommandReceived(topic, message, length);
+}
+
+void _heartbeat() {
+    _instance->publish(_instance->heartbeat_topic.c_str(), millis());
 }
 
 RemoteDebug Debug;
@@ -27,6 +29,22 @@ MokoshConfiguration Mokosh::CreateConfiguration(const char* ssid, const char* pa
 Mokosh::Mokosh() {
     _instance = this;
     this->debugReady = false;
+
+    // initialize interval events table
+    for (uint8_t i = 0; i < EVENTS_COUNT; i++)
+        events[i].interval = 0;
+}
+
+void Mokosh::debug(DebugLevel level, const char* func, const char* fmt, ...) {
+    if (Debug.isActive((uint8_t)level)) {
+        char dest[256];
+        va_list argptr;
+        va_start(argptr, fmt);
+        vsprintf(dest, fmt, argptr);
+        va_end(argptr);
+
+        Debug.printf("(%s) %s\n", func, dest);          
+    }
 }
 
 void Mokosh::setConfiguration(MokoshConfiguration config) {
@@ -80,14 +98,16 @@ void Mokosh::begin(String prefix) {
     broker.fromString(this->config.broker);
 
     this->mqtt->setServer(broker, this->config.brokerPort);
-    debugV("MQTT server set to %s port %d", broker.toString().c_str(), this->config.brokerPort);
+    debugD("MQTT server set to %s port %d", broker.toString().c_str(), this->config.brokerPort);
 
     if (!this->reconnect()) {
         this->error(Mokosh::Error_MQTT);
     }
 
-    debugV("Sending hello");
+    debugI("Sending hello");
     this->publish(this->version_topic.c_str(), VERSION);
+
+    this->onInterval(_heartbeat, HEARTBEAT);
 
     debugI("Starting operations...");
 }
@@ -165,9 +185,25 @@ bool Mokosh::configExists() {
 
 void Mokosh::setDebugLevel(DebugLevel level) {
     this->debugLevel = level;
+
+    if (this->debugReady) {
+        debugW("Setting debug level should be before begin(), ignoring for internals.");
+    }
 }
 
 void Mokosh::loop() {
+    unsigned long now = millis();
+
+    for (uint8_t i = 0; i < EVENTS_COUNT; i++) {
+        if (events[i].interval != 0) {
+            if (now - events[i].last > events[i].interval) {
+                debugV("Executing interval func %x on time %ld", events[i].handler, events[i].interval);
+                events[i].handler();
+                events[i].last = now;
+            }
+        }
+    }
+
     this->mqtt->loop();
     Debug.handle();
 }
@@ -206,7 +242,7 @@ void Mokosh::mqttCommandReceived(char* topic, uint8_t* message, unsigned int len
     }
     msg[length + 1] = 0;
 
-    debugV("Command: %s", msg);
+    debugD("Command: %s", msg);
 
     if (strcmp(msg, "gver") == 0) {
         this->publish(version_topic.c_str(), VERSION);
@@ -260,18 +296,37 @@ void Mokosh::mqttCommandReceived(char* topic, uint8_t* message, unsigned int len
             this->error(errorCode);
             return;
         }
+
+        if (msg2.startsWith("setdebuglevel=")) {
+            long level = msg2.substring(14).toInt();
+            this->setDebugLevel((DebugLevel)(int)level);
+            return;
+        }
     }
 
     if (this->commandHandler != nullptr) {
-        debugV("Passing message to custom command handler");
+        debugD("Passing message to custom command handler");
         this->commandHandler(message, length);
     }
 }
 
-void Mokosh::onInterval(f_interval_t func, uint32_t time) {
-    // dodaj do jakiegoś wektora
-    // i w loopie sprawdzaj czas
-    // i odpalaj funkcje zgodnie z harmonogramem
+void Mokosh::onInterval(f_interval_t func, unsigned long time) {
+    debugV("Registering interval function %x on time %ld", func, time);
+
+    IntervalEvent* first = NULL;
+    for (uint8_t i = 0; i < EVENTS_COUNT; i++) {
+        if (events[i].interval == 0) {
+            first = &events[i];
+            break;
+        }
+    }
+
+    if (first == NULL) {
+        debugW("Interval function cannot be registered, no free space.");
+    } else {
+        first->handler = func;
+        first->interval = time;
+    }
 }
 
 void Mokosh::publish(const char* subtopic, String payload) {
@@ -309,7 +364,7 @@ void Mokosh::error(int code) {
             ESP.reset();
         } else {
             if (this->debugReady) {
-                debugD("Going loop.");
+                debugV("Going loop.");
             } else {
                 Serial.print("Going loop.");
             }
