@@ -46,6 +46,8 @@ class Mokosh {
     static Mokosh* getInstance();
     void factoryReset();
 
+    void mqttCommandReceived(char* topic, uint8_t* message, unsigned int length);
+
     const uint8_t Error_CONFIG = 1;
     const uint8_t Error_FS = 2;
     const uint8_t Error_WIFI = 3;
@@ -82,9 +84,7 @@ class Mokosh {
     const String cmd_topic = "cmd";
     const String version_topic = "version";
     const String debug_topic = "debug";
-    const String heartbeat_topic = "debug/heartbeat";
-
-    void onCommand(char* topic, uint8_t* message, unsigned int length);
+    const String heartbeat_topic = "debug/heartbeat";    
 
     void handleOta(char* version);
 

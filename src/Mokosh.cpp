@@ -7,6 +7,10 @@
 
 static Mokosh* _instance;
 
+void _mqtt_callback(char* topic, uint8_t* message, unsigned int length) {
+    _instance->mqttCommandReceived(topic, message, length);
+}
+
 RemoteDebug Debug;
 
 MokoshConfiguration create_configuration(const char* ssid, const char* password, const char* broker, uint16_t brokerPort, const char* updateServer, uint16_t updatePort, const char* updatePath) {
@@ -108,8 +112,11 @@ bool Mokosh::reconnect() {
         if (this->mqtt->connect(this->hostNameC)) {
             debugI("MQTT reconnected");
 
-            this->mqtt->subscribe(this->cmd_topic.c_str());
-            //this->mqtt.setCallback(this->onCommand); ??? // TODO: setCallback, how?
+            char cmd_topic[32];            
+            sprintf(cmd_topic, "%s_%s/cmd", this->prefix.c_str(), this->hostNameC, this->cmd_topic.c_str());
+
+            this->mqtt->subscribe(cmd_topic);
+            this->mqtt->setCallback(_mqtt_callback);
 
             return true;
         } else {
@@ -345,7 +352,7 @@ void Mokosh::factoryReset() {
     ESP.restart();
 }
 
-void Mokosh::onCommand(char* topic, uint8_t* message, unsigned int length) {
+void Mokosh::mqttCommandReceived(char* topic, uint8_t* message, unsigned int length) {
     if (strstr(topic, "cmd") == NULL) {
         return;
     }
