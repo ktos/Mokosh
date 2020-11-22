@@ -7,7 +7,7 @@ void customCommand(uint8_t* message, unsigned int length) {
 }
 
 void setup() {
-    MokoshConfiguration mc = create_configuration("kilibar_iot", "RASengan91", "192.168.8.12", 1883);
+    MokoshConfiguration mc = Mokosh::CreateConfiguration("kilibar_iot", "RASengan91", "192.168.8.12", 1883);
     
     mokosh.setConfiguration(mc);
     mokosh.setDebugLevel(DebugLevel::VERBOSE);

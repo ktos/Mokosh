@@ -55,6 +55,8 @@ class Mokosh {
     const uint8_t Error_MQTT = 5;
     const uint8_t Error_NOTIMPLEMENTED = 6;
 
+    static MokoshConfiguration CreateConfiguration(const char* ssid, const char* password, const char* broker, uint16_t brokerPort);
+
    private:
     f_error_handler_t errorHandler;
     f_command_handler_t commandHandler;
@@ -67,9 +69,7 @@ class Mokosh {
 
     WiFiClient* client;
     PubSubClient* mqtt;    
-
-    bool isOtaEnabled = false;
-    bool isFirstRunEnabled = false;
+    
     bool isFSEnabled = true;
     bool isRebootOnError = false;
 
@@ -95,5 +95,3 @@ class Mokosh {
     char informationalVersion[100] = {0};
     char buildDate[11] = {0};
 };
-
-MokoshConfiguration create_configuration(const char* ssid, const char* password, const char* broker, uint16_t brokerPort);

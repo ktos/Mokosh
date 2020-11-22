@@ -13,16 +13,13 @@ void _mqtt_callback(char* topic, uint8_t* message, unsigned int length) {
 
 RemoteDebug Debug;
 
-MokoshConfiguration create_configuration(const char* ssid, const char* password, const char* broker, uint16_t brokerPort, const char* updateServer, uint16_t updatePort, const char* updatePath) {
+MokoshConfiguration Mokosh::CreateConfiguration(const char* ssid, const char* password, const char* broker, uint16_t brokerPort) {
     MokoshConfiguration mc;
 
     strcpy(mc.ssid, ssid);
     strcpy(mc.password, password);
     strcpy(mc.broker, broker);
     mc.brokerPort = brokerPort;
-    strcpy(mc.updateServer, updateServer);
-    mc.updatePort = updatePort;
-    strcpy(mc.updatePath, updatePath);
 
     return mc;
 }
@@ -56,16 +53,8 @@ void Mokosh::begin(String prefix) {
             this->error(Mokosh::Error_FS);
         }
 
-        if (this->isConfigurationSet()) {
-            if (!this->configLoad()) {
-                if (this->isFirstRunEnabled) {
-                    // first run
-                    // TODO: first run mode
-                    this->error(Mokosh::Error_NOTIMPLEMENTED);
-                } else {
-                    this->error(Mokosh::Error_CONFIG);
-                }
-            }
+        if (!this->isConfigurationSet()) {
+            this->configLoad();
         }
     }
 
@@ -271,18 +260,6 @@ void Mokosh::mqttCommandReceived(char* topic, uint8_t* message, unsigned int len
             this->error(errorCode);
             return;
         }
-
-        if (msg2.startsWith("sota=")) {
-            if (!this->isOtaEnabled)
-                return;
-
-            String version = msg2.substring(5);
-
-            char buf[32];
-            version.toCharArray(buf, 32);
-
-            this->handleOta(buf);
-        }
     }
 
     if (this->commandHandler != nullptr) {
@@ -313,19 +290,6 @@ void Mokosh::publish(const char* subtopic, float payload) {
     dtostrf(payload, 4, 2, spay);
 
     this->publish(subtopic, spay);
-}
-
-void Mokosh::startOTAUpdate(char* version) {
-    char uri[128];
-    sprintf(uri, this->config.updatePath, version);
-
-    debugI("Starting OTA update to version %s", version);
-
-    t_httpUpdate_return ret = ESPhttpUpdate.update(this->config.updateServer, this->config.updatePort, uri);
-
-    if (ret == HTTP_UPDATE_FAILED) {
-        debugW("OTA update failed");
-    }
 }
 
 void Mokosh::error(int code) {
