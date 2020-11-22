@@ -63,8 +63,7 @@ class Mokosh {
     String hostName;
     char hostNameC[32];
     String prefix;
-    MokoshConfiguration config;
-    bool isConfigurationSet();
+    MokoshConfiguration config;    
 
     WiFiClient* client;
     PubSubClient* mqtt;    
@@ -77,6 +76,7 @@ class Mokosh {
     DebugLevel debugLevel = DebugLevel::WARNING;
 
     bool configExists();
+    bool isConfigurationSet();
     bool configLoad();
     bool connectWifi();
     bool reconnect();
@@ -86,7 +86,7 @@ class Mokosh {
     const String debug_topic = "debug";
     const String heartbeat_topic = "debug/heartbeat";    
 
-    void handleOta(char* version);
+    void startOTAUpdate(char* version);
 
     void error(int code);
 
@@ -96,4 +96,4 @@ class Mokosh {
     char buildDate[11] = {0};
 };
 
-MokoshConfiguration create_configuration(const char* ssid, const char* password, const char* broker, uint16_t brokerPort, const char* updateServer,  uint16_t updatePort, const char* updatePath);
+MokoshConfiguration create_configuration(const char* ssid, const char* password, const char* broker, uint16_t brokerPort);

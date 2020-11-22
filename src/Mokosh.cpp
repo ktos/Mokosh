@@ -76,6 +76,9 @@ void Mokosh::begin(String prefix) {
     if (this->connectWifi()) {
         Debug.begin(this->hostName, (uint8_t)this->debugLevel);
         Debug.setSerialEnabled(true);
+
+        this->debugReady = true;
+
         debugI("IP: %s", WiFi.localIP().toString().c_str());
     } else {
         this->error(Mokosh::Error_WIFI);
@@ -112,7 +115,7 @@ bool Mokosh::reconnect() {
         if (this->mqtt->connect(this->hostNameC)) {
             debugI("MQTT reconnected");
 
-            char cmd_topic[32];            
+            char cmd_topic[32];
             sprintf(cmd_topic, "%s_%s/cmd", this->prefix.c_str(), this->hostNameC, this->cmd_topic.c_str());
 
             this->mqtt->subscribe(cmd_topic);
@@ -197,155 +200,6 @@ bool Mokosh::configLoad() {
     // TODO: parsing config file
 }
 
-// bool Mokosh::configLoad(MokoshConfiguration* config) {
-//     File configFile = LittleFS.open("/config.json", "r");
-
-//     if (!configFile) {
-//         Debug_print(DLVL_ERROR, "CONFIG", "Cannot open config file");
-//         return false;
-//     }
-
-//     size_t size = configFile.size();
-//     if (size > 1024) {
-//         Debug_print(DLVL_ERROR, "CONFIG", "Config file too large");
-//         return false;
-//     }
-
-//     // Allocate a buffer to store contents of the file.
-//     std::unique_ptr<char[]> buf(new char[size]);
-
-//     // We don't use String here because ArduinoJson library requires the input
-//     // buffer to be mutable. If you don't use ArduinoJson, you may as well
-//     // use configFile.readString instead.
-//     configFile.readBytes(buf.get(), size);
-
-//     StaticJsonBuffer<300> jsonBuffer;
-//     JsonObject& json = jsonBuffer.parseObject(buf.get());
-
-//     if (!json.success()) {
-//         Debug_print(DLVL_ERROR, "CONFIG", "Failed to parse config file");
-//         return false;
-//     }
-
-//     const char* ssid2 = json["ssid"];
-//     const char* password2 = json["password"];
-//     const char* broker2 = json["broker"];
-//     const char* update2 = json["updateServer"];
-
-//     memcpy(config->ssid, ssid2, 32);
-//     memcpy(config->password, password2, 32);
-//     memcpy(config->broker, broker2, 32);
-//     memcpy(config->updateServer, update2, 32);
-
-//     config->brokerPort = json["brokerPort"];
-//     config->updatePort = json["updatePort"];
-
-//     const char* color = json["color"];
-//     String color2 = color;
-
-//     if (color2.length() == 11) {
-//         int r = color2.substring(0, 3).toInt();
-//         int g = color2.substring(4, 7).toInt();
-//         int b = color2.substring(8, 11).toInt();
-
-//         config->color = NeoPixel_convertColorToCode(r, g, b);
-//     } else {
-//         config->color = (uint32_t)json["color"];
-//     }
-
-//     Debug_print(DLVL_DEBUG, "CONFIG", config->ssid);
-//     Debug_print(DLVL_DEBUG, "CONFIG", config->password);
-//     Debug_print(DLVL_DEBUG, "CONFIG", config->broker);
-//     Debug_print(DLVL_DEBUG, "CONFIG", config->brokerPort);
-//     Debug_print(DLVL_DEBUG, "CONFIG", config->color);
-//     Debug_print(DLVL_DEBUG, "CONFIG", config->updatePath);
-
-//     return true;
-// }
-
-// bool Mokosh::configUpdate(MokoshConfiguration config) {
-//     StaticJsonBuffer<300> jsonBuffer;
-//     JsonObject& json = jsonBuffer.createObject();
-
-//     json["ssid"] = config.ssid;
-//     json["password"] = config.password;
-//     json["broker"] = config.broker;
-//     json["brokerPort"] = config.brokerPort;
-//     json["updateServer"] = config.updateServer;
-//     json["updatePort"] = config.updatePort;
-//     json["updatePath"] = config.updatePath;
-//     json["color"] = config.color;
-
-//     File configFile = LittleFS.open("/config.json", "w");
-//     if (!configFile) {
-//         Debug_print(DLVL_ERROR, "CONFIG", "Failed to write to config file");
-//         return false;
-//     }
-
-//     json.printTo(configFile);
-//     return true;
-// }
-
-// void Mokosh::configprettyPrint(MokoshConfiguration config) {
-//     StaticJsonBuffer<300> jsonBuffer;
-//     JsonObject& json = jsonBuffer.createObject();
-
-//     json["ssid"] = config.ssid;
-//     json["password"] = config.password;
-//     json["broker"] = config.broker;
-//     json["brokerPort"] = config.brokerPort;
-//     json["updateServer"] = config.updateServer;
-//     json["updatePort"] = config.updatePort;
-//     json["color"] = config.color;
-//     json["updatePath"] = config.updatePath;
-
-//     json.prettyPrintTo(Serial);
-// }
-
-// void Mokosh::configUpdateField(MokoshConfiguration* config, const char* field, const char* value) {
-//     Debug_print(DLVL_DEBUG, "CONFIG", "Changing");
-//     Debug_print(DLVL_DEBUG, "CONFIG", field);
-//     Debug_print(DLVL_DEBUG, "CONFIG", value);
-
-//     if (strcmp(field, "ssid") == 0) {
-//         strcpy(config->ssid, value);
-//     }
-
-//     if (strcmp(field, "password") == 0) {
-//         strcpy(config->password, value);
-//     }
-
-//     if (strcmp(field, "broker") == 0) {
-//         strcpy(config->broker, value);
-//     }
-
-//     if (strcmp(field, "brokerPort") == 0) {
-//         config->brokerPort = String(value).toInt();
-//     }
-
-//     if (strcmp(field, "updateServer") == 0) {
-//         strcpy(config->updateServer, value);
-//     }
-
-//     if (strcmp(field, "updatePort") == 0) {
-//         config->updatePort = String(value).toInt();
-//     }
-
-//     if (strcmp(field, "updatePath") == 0) {
-//         strcpy(config->updatePath, value);
-//     }
-
-//     if (strcmp(field, "color") == 0) {
-//         String color2 = value;
-
-//         int r = color2.substring(0, 3).toInt();
-//         int g = color2.substring(4, 7).toInt();
-//         int b = color2.substring(8, 11).toInt();
-
-//         config->color = NeoPixel_convertColorToCode(r, g, b);
-//     }
-// }
-
 void Mokosh::factoryReset() {
     LittleFS.remove("/config.json");
 
@@ -404,8 +258,7 @@ void Mokosh::mqttCommandReceived(char* topic, uint8_t* message, unsigned int len
     }
 
     if (strcmp(msg, "reloadconfig") == 0) {
-        // Debug_print(DLVL_INFO, "CONFIG", "Reloading configuration from SPIFFS");
-        // SpiffsConfig_load(&config);
+        // TODO: reload config from FS
 
         return;
     }
@@ -462,7 +315,7 @@ void Mokosh::publish(const char* subtopic, float payload) {
     this->publish(subtopic, spay);
 }
 
-void Mokosh::handleOta(char* version) {
+void Mokosh::startOTAUpdate(char* version) {
     char uri[128];
     sprintf(uri, this->config.updatePath, version);
 
@@ -511,126 +364,3 @@ void Mokosh::onCommand(f_command_handler_t handler) {
 void Mokosh::enableRebootOnError() {
     this->isRebootOnError = true;
 }
-
-/*
-ESP8266WebServer server(80);
-
-
-
-void FirstRun_configure(const char *_version, const char *_informationalVersion, const char *_buildDate) {
-    strcpy(version, _version);
-    strcpy(informationalVersion, _informationalVersion);
-    strcpy(buildDate, _buildDate);
-}
-
-void handleRoot() {
-    server.send(200, "text/plain", "Hi, I'm Mokosh.");
-}
-
-File fsUploadFile;
-
-void handleFileUpload() {
-    HTTPUpload &upload = server.upload();
-    if (upload.status == UPLOAD_FILE_START) {
-        fsUploadFile = SPIFFS.open("/config.json", "w");
-
-        Debug_print(DLVL_DEBUG, "FIRSTRUN-CONFIG", "Upload started");
-    } else if (upload.status == UPLOAD_FILE_WRITE) {
-        if (fsUploadFile)
-            fsUploadFile.write(upload.buf, upload.currentSize);
-    } else if (upload.status == UPLOAD_FILE_END) {
-        if (fsUploadFile)
-            fsUploadFile.close();
-
-        Debug_print(DLVL_DEBUG, "FIRSTRUN-CONFIG", "Upload finished");
-        Debug_print(DLVL_DEBUG, "FIRSTRUN-CONFIG", (int)upload.totalSize);
-    }
-}
-
-void handleWhois() {
-    String whois = "{ ";
-    whois += "\"id\": \"";
-    whois += ssid;
-    whois += "\",\n";
-
-    whois += "\"version\": \"";
-    whois += version;
-    whois += "\",\n";
-
-#if DEBUG_LEVEL < 4
-    whois += "\"informational_version\": \"";
-    whois += informationalVersion;
-    whois += "\",\n";
-#endif
-
-#if DEBUG_LEVEL < 4
-    whois += "\"build_date\": \"";
-    whois += buildDate;
-    whois += "\",\n";
-#endif
-
-    whois += "\"md5\": \"";
-    whois += ESP.getSketchMD5();
-    whois += "\"\n";
-
-    whois += " }";
-
-    server.send(200, "application/json", whois);
-}
-
-void handleNotFound() {
-    String message = "File Not Found\n\n";
-
-#if DEBUG_LEVEL < 4
-    message += "URI: ";
-    message += server.uri();
-    message += "\nMethod: ";
-    message += (server.method() == HTTP_GET) ? "GET" : "POST";
-    message += "\nArguments: ";
-    message += server.args();
-    message += "\n";
-
-    for (uint8_t i = 0; i < server.args(); i++) {
-        message += " " + server.argName(i) + ": " + server.arg(i) + "\n";
-    }
-#endif
-
-    server.send(404, "text/plain", message);
-}
-
-void handleReboot() {
-    server.send(200, "text/plain", "Good bye.");
-
-    delay(1000);
-    server.close();
-    server.stop();
-    WiFi.disconnect(true);
-    delay(1000);
-
-    ESP.restart();
-}
-
-void FirstRun_start(const char *prefix) {
-    sprintf(ssid, "%s_%06X", prefix, ESP.getChipId());
-
-    WiFi.softAP(ssid);
-
-    IPAddress myIP = WiFi.softAPIP();
-
-    Debug_print(DLVL_INFO, "FIRSTRUN", "Started First Run");
-    Debug_print(DLVL_INFO, "FIRSTRUN", myIP.toString());
-
-    server.onNotFound(handleNotFound);
-    server.on("/", handleRoot);
-    server.on("/whois", handleWhois);
-    server.on("/reboot", HTTPMethod::HTTP_POST, handleReboot);
-    server.on(
-        "/config", HTTPMethod::HTTP_POST, []() { server.send(200, "text/plain", ""); }, handleFileUpload);
-
-    server.begin();
-}
-
-void FirstRun_handle() {
-    server.handleClient();
-}
-*/
