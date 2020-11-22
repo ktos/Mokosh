@@ -433,6 +433,7 @@ void Mokosh::mqttCommandReceived(char* topic, uint8_t* message, unsigned int len
     }
 
     if (this->commandHandler != nullptr) {
+        debugV("Passing message to custom command handler");
         this->commandHandler(message, length);
     }
 }
@@ -501,6 +502,10 @@ void Mokosh::error(int code) {
             }
         }
     }
+}
+
+void Mokosh::onCommand(f_command_handler_t handler) {
+    this->commandHandler = handler;
 }
 
 void Mokosh::enableRebootOnError() {
