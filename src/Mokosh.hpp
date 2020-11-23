@@ -60,6 +60,7 @@ class Mokosh {
     void onCommand(f_command_handler_t handler);             // przed begin - callback który ma być odpalany na customową komendę
     void onError(f_error_handler_t handler);                 // przed begin - callback który ma być odpalany na wypadek błędu
     void onInterval(f_interval_t func, unsigned long time);  // uruchom funkcję f co czas time
+    void error(int code);
 
     static Mokosh* getInstance();    
     void factoryReset();
@@ -106,9 +107,7 @@ class Mokosh {
     bool connectWifi();
     bool reconnect();
 
-    void startOTAUpdate(char* version);
-
-    void error(int code);
+    void startOTAUpdate(char* version);    
 
     char ssid[16] = {0};
     char version[32] = {0};

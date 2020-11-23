@@ -344,6 +344,10 @@ void Mokosh::onInterval(f_interval_t func, unsigned long time) {
     }
 }
 
+void Mokosh::onError(f_error_handler_t handler) {
+    this->errorHandler = handler;
+}
+
 void Mokosh::publish(const char* subtopic, String payload) {
     this->publish(subtopic, payload.c_str());
 }
@@ -363,21 +367,22 @@ void Mokosh::publish(const char* subtopic, float payload) {
 }
 
 void Mokosh::error(int code) {
-    if (this->debugReady) {
-        debugE("Critical error: %d", code);
-    } else {
+    if (!this->debugReady) {
         Serial.print("Critical error: ");
         Serial.print(code);
         Serial.println(", debug not ready.");
     }
 
     if (this->errorHandler != nullptr) {
+        debugV("Handler called for error %d", code);
         this->errorHandler(code);
     } else {
         if (this->isRebootOnError) {
+            debugE("Unhandled error, code: %d, reboot imminent.", code);
             delay(10000);
             ESP.reset();
         } else {
+            debugE("Unhandled error, code: %d", code);
             if (this->debugReady) {
                 debugV("Going loop.");
             } else {
