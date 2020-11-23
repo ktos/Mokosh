@@ -1,13 +1,14 @@
-#include <Mokosh.h>
+#include <Mokosh.hpp>
+
+Mokosh m;
 
 void setup() {
-    // use built-in LED, not NeoPixel strip
-    Error_configure(true, false);
+    // will automatically reboot if error is met
+    m.enableRebootOnError();
+    m.begin("Mokosh");    
 }
 
 void loop() {
-    // will "blink out" the ERROR_CONFIG
-    Error_show(ERROR_CONFIG);
-
     delay(1000);
+    m.error(201); // throw error code 201 (will reboot)
 }
