@@ -1,49 +1,31 @@
-#include <Mokosh.h>
+#include <Mokosh.hpp>
 
-char debug_topic[32] = {0};
+// global object for the framework
+Mokosh mokosh;
 
 void setup() {
     srand(millis());
 
-    // connects to the WiFi network called yourssid with password yourpassword
-    // setting hostname to Mokosh_XXXXX
-    WiFi_init("Mokosh");
-    WiFi_connect("yourssid", "yourpassword");
+    // static configuration to be used: Wifi with yourssid and yourpassword password
+    // mqtt broker at 192.168.1.10, port 1883
+    MokoshConfiguration mc = Mokosh::CreateConfiguration("yourssid", "yourpassword", "192.168.1.10", 1883);
+    mokosh.setConfiguration(mc);
 
-    // will connect to MQTT broker at 192.168.1.10 at port 1883
-    Mqtt_setup("192.168.1.10", 1883);
-    char *host = WiFi_getHostString();
-    Mqtt_reconnect();
-
-    // will publish to topic Mokosh_XXXXX/debug
-    sprintf(debug_topic, "%s/debug", host);
-
-    // sets up callback run when new command is received
-    Mqtt_setCallback(onCommand);
-
-    // sets up debug communiation over serial
-    Debug_init(DLVL_DEBUG);
+    // device id will be Mokosh_ABCDE where ABCDE is a chip id
+    mokosh.begin("Mokosh");
 }
 
 long lastMessage = 0;
 
 void loop() {
     // publish new random int message every 2000 ms
-    if (millis() - lastMessage > 2000) {
-        Mqtt_publish(debug_topic, rand());
+    
+    if (millis() - lastMessage > 2000) {        
+        // will publish to Mokosh_ABCDE/rand topic
+        mokosh.publish("rand", rand());
         lastMessage = millis();
     }
 
-    // handle MQTT communication
-    Mqtt_loop();
-}
-
-void onCommand(char *topic, uint8_t *message, unsigned int length) {
-    char msg[32] = {0};
-    for (unsigned int i = 0; i < length; i++) {
-        msg[i] = message[i];
-    }
-    msg[length + 1] = 0;
-
-    Debug_print(DLVL_DEBUG, "I received command!", msg);
+    // handle loop
+    mokosh.loop();
 }
