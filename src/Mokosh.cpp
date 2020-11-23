@@ -1,5 +1,6 @@
 #include "Mokosh.hpp"
 
+#include <ArduinoJson.h>
 #include <ESP8266httpUpdate.h>
 #include <LittleFS.h>
 
@@ -43,7 +44,7 @@ void Mokosh::debug(DebugLevel level, const char* func, const char* fmt, ...) {
         vsprintf(dest, fmt, argptr);
         va_end(argptr);
 
-        Debug.printf("(%s) %s\n", func, dest);          
+        Debug.printf("(%s) %s\n", func, dest);
     }
 }
 
@@ -76,7 +77,7 @@ void Mokosh::begin(String prefix) {
         }
     }
 
-    if (this->isConfigurationSet()) {
+    if (!this->isConfigurationSet()) {
         this->error(Mokosh::Error_CONFIG);
     }
 
@@ -98,7 +99,7 @@ void Mokosh::begin(String prefix) {
     broker.fromString(this->config.broker);
 
     this->mqtt->setServer(broker, this->config.brokerPort);
-    debugD("MQTT server set to %s port %d", broker.toString().c_str(), this->config.brokerPort);
+    debugD("MQTT broker set to %s port %d", broker.toString().c_str(), this->config.brokerPort);
 
     if (!this->reconnect()) {
         this->error(Mokosh::Error_MQTT);
@@ -125,7 +126,7 @@ bool Mokosh::reconnect() {
             debugI("MQTT reconnected");
 
             char cmd_topic[32];
-            sprintf(cmd_topic, "%s_%s/cmd", this->prefix.c_str(), this->hostNameC, this->cmd_topic.c_str());
+            sprintf(cmd_topic, "%s_%s/%s", this->prefix.c_str(), this->hostNameC, this->cmd_topic.c_str());
 
             this->mqtt->subscribe(cmd_topic);
             this->mqtt->setCallback(_mqtt_callback);
@@ -151,7 +152,7 @@ PubSubClient* Mokosh::getPubSubClient() {
 }
 
 bool Mokosh::isConfigurationSet() {
-    return strcmp(this->config.ssid, "") == 0;
+    return strcmp(this->config.ssid, "") != 0;
 }
 
 bool Mokosh::connectWifi() {
@@ -197,7 +198,7 @@ void Mokosh::loop() {
     for (uint8_t i = 0; i < EVENTS_COUNT; i++) {
         if (events[i].interval != 0) {
             if (now - events[i].last > events[i].interval) {
-                debugV("Executing interval func %x on time %ld", events[i].handler, events[i].interval);
+                debugV("Executing interval func %x on time %ld", (unsigned int)events[i].handler, events[i].interval);
                 events[i].handler();
                 events[i].last = now;
             }
@@ -222,7 +223,21 @@ bool Mokosh::configLoad() {
         return false;
     }
 
-    // TODO: parsing config file
+    DynamicJsonDocument conf(1024);
+    deserializeJson(conf, configFile);
+
+    const char* ssid = conf["ssid"];
+    strcpy(this->config.ssid, ssid);
+
+    const char* password = conf["password"];
+    strcpy(this->config.password, password);
+
+    const char* broker = conf["broker"];
+    strcpy(this->config.broker, broker);
+
+    this->config.brokerPort = conf["brokerPort"];
+
+    return true;
 }
 
 void Mokosh::factoryReset() {
@@ -283,7 +298,7 @@ void Mokosh::mqttCommandReceived(char* topic, uint8_t* message, unsigned int len
     }
 
     if (strcmp(msg, "reloadconfig") == 0) {
-        // TODO: reload config from FS
+        this->configLoad();
 
         return;
     }
@@ -311,7 +326,7 @@ void Mokosh::mqttCommandReceived(char* topic, uint8_t* message, unsigned int len
 }
 
 void Mokosh::onInterval(f_interval_t func, unsigned long time) {
-    debugV("Registering interval function %x on time %ld", func, time);
+    debugV("Registering interval function %x on time %ld", (unsigned int)func, time);
 
     IntervalEvent* first = NULL;
     for (uint8_t i = 0; i < EVENTS_COUNT; i++) {

@@ -13,14 +13,14 @@ void sendData() {
 }
 
 void setup() {
-    MokoshConfiguration mc = Mokosh::CreateConfiguration("kilibar_iot", "RASengan91", "192.168.8.12", 1883);
+    //MokoshConfiguration mc = Mokosh::CreateConfiguration("kilibar_iot", "RASengan91", "192.168.8.12", 1883);
+    //mokosh.setConfiguration(mc);
 
-    mokosh.setConfiguration(mc);
-    mokosh.setDebugLevel(DebugLevel::DEBUG);
+    mokosh.setDebugLevel(DebugLevel::VERBOSE);
     mokosh.onCommand(customCommand);
 
     mokosh.begin("Mokosh");
-    mokosh.onInterval(sendData, 2000);
+    //mokosh.onInterval(sendData, 2000);
 }
 
 void loop() {
