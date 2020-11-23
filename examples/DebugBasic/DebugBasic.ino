@@ -2,25 +2,35 @@
 
 Mokosh mokosh;
 
+// callback for custom command handling
 void customCommand(uint8_t* message, unsigned int length) {
-    mokosh.publish("test", 1.0f);
-    mdebugE("Error!");
-}
+    // you can use mdebugI, mdebugE and so on
+    // to automatically work with RemoteDebug
+    mdebugI("Received message on command channel of length %d", length);
 
-void sendData() {
-    mokosh.publish("rand", rand());
-    mdebugI("Publishing random values to MQTT");
+    if (length < 32) {
+        // very crude string creating from bytes
+        char msg[32] = {0};
+        for (unsigned int i = 0; i < length; i++) {
+            msg[i] = message[i];
+        }
+        msg[length + 1] = 0;
+
+        mdebugD("Message: %s", msg);
+    } else {
+        mdebugE("Message too long for buffer.");
+    }
 }
 
 void setup() {
-    //MokoshConfiguration mc = Mokosh::CreateConfiguration("kilibar_iot", "RASengan91", "192.168.8.12", 1883);
-    //mokosh.setConfiguration(mc);
-
+    // debug set to Verbose will display everything
+    // available are: verbose, debug, info, warning, error
     mokosh.setDebugLevel(DebugLevel::VERBOSE);
     mokosh.onCommand(customCommand);
 
+    // no custom configuration is set, so it will try to load
+    // from /config.json in LittleFS
     mokosh.begin("Mokosh");
-    //mokosh.onInterval(sendData, 2000);
 }
 
 void loop() {
