@@ -2,6 +2,7 @@
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
 #include <RemoteDebug.h>
+#include <ArduinoJson.h>
 
 #include "MokoshConfig.hpp"
 
@@ -85,6 +86,12 @@ class Mokosh {
     static MokoshConfiguration CreateConfiguration(const char* ssid, const char* password, const char* broker, uint16_t brokerPort);
     static void debug(DebugLevel level, const char* func, const char* fmt, ...);
 
+    String readConfigString(const char* field);
+    int readConfigInt(const char* field);
+    float readConfigFloat(const char* field);
+    void setConfig(const char* field, const char* value);
+    void saveConfig();
+
    private:
     f_error_handler_t errorHandler;
     f_command_handler_t commandHandler;
@@ -97,6 +104,8 @@ class Mokosh {
     IntervalEvent events[EVENTS_COUNT];
     String version = "1.0.0";
     String buildDate = "1970-01-01";
+
+    StaticJsonDocument<500> configJson;
 
     WiFiClient* client;
     PubSubClient* mqtt;

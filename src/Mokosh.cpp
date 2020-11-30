@@ -1,6 +1,5 @@
 #include "Mokosh.hpp"
 
-#include <ArduinoJson.h>
 #include <ESP8266httpUpdate.h>
 #include <LittleFS.h>
 
@@ -209,6 +208,30 @@ void Mokosh::loop() {
     Debug.handle();
 }
 
+String Mokosh::readConfigString(const char* field) {
+    const char* data = this->configJson[field];
+    return String(data);
+}
+
+int Mokosh::readConfigInt(const char* field) {
+    int data = this->configJson[field];
+    return data;
+}
+
+float Mokosh::readConfigFloat(const char* field) {
+    float data = this->configJson[field];
+    return data;
+}
+
+void Mokosh::setConfig(const char* field, const char* value) {
+    this->configJson[field] = value;
+}
+
+void Mokosh::saveConfig() {
+    File configFile = LittleFS.open("/config.json", "w");
+    serializeJson(this->configJson, configFile);
+}
+
 bool Mokosh::configLoad() {
     File configFile = LittleFS.open("/config.json", "r");
 
@@ -218,24 +241,23 @@ bool Mokosh::configLoad() {
     }
 
     size_t size = configFile.size();
-    if (size > 1024) {
+    if (size > 500) {
         debugE("Config file too large");
         return false;
     }
 
-    DynamicJsonDocument conf(1024);
-    deserializeJson(conf, configFile);
+    deserializeJson(this->configJson, configFile);
 
-    const char* ssid = conf["ssid"];
+    const char* ssid = this->configJson["ssid"];
     strcpy(this->config.ssid, ssid);
 
-    const char* password = conf["password"];
+    const char* password = this->configJson["password"];
     strcpy(this->config.password, password);
 
-    const char* broker = conf["broker"];
+    const char* broker = this->configJson["broker"];
     strcpy(this->config.broker, broker);
 
-    this->config.brokerPort = conf["brokerPort"];
+    this->config.brokerPort = this->configJson["brokerPort"];
 
     return true;
 }
@@ -320,6 +342,30 @@ void Mokosh::mqttCommandReceived(char* topic, uint8_t* message, unsigned int len
         if (msg2.startsWith("showerror=")) {
             long errorCode = msg2.substring(10).toInt();
             this->error(errorCode);
+            return;
+        }
+
+        if (msg2.startsWith("showconfigs=")) {
+            String field = msg2.substring(12);
+            String value = this->readConfigString(field.c_str());
+
+            this->publish(debug_topic.c_str(), value);
+            return;
+        }
+
+        if (msg2.startsWith("showconfigi=")) {
+            String field = msg2.substring(12);
+            int value = this->readConfigInt(field.c_str());
+
+            this->publish(debug_topic.c_str(), value);
+            return;
+        }
+
+        if (msg2.startsWith("showconfigf=")) {
+            String field = msg2.substring(12);
+            float value = this->readConfigFloat(field.c_str());
+
+            this->publish(debug_topic.c_str(), value);
             return;
         }
 
