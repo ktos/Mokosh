@@ -89,8 +89,11 @@ class Mokosh {
     String readConfigString(const char* field);
     int readConfigInt(const char* field);
     float readConfigFloat(const char* field);
-    void setConfig(const char* field, const char* value);
+    void setConfig(const char* field, String value);
+    void setConfig(const char* field, int value);
+    void setConfig(const char* field, float value);
     void saveConfig();
+    bool reloadConfig();
 
    private:
     f_error_handler_t errorHandler;
@@ -116,8 +119,7 @@ class Mokosh {
     DebugLevel debugLevel = DebugLevel::WARNING;
 
     bool configExists();
-    bool isConfigurationSet();
-    bool configLoad();
+    bool isConfigurationSet();    
     bool connectWifi();
     bool reconnect();
 

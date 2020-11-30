@@ -72,7 +72,7 @@ void Mokosh::begin(String prefix) {
         }
 
         if (!this->isConfigurationSet()) {
-            this->configLoad();
+            this->reloadConfig();
         }
     }
 
@@ -156,7 +156,9 @@ bool Mokosh::isConfigurationSet() {
 
 bool Mokosh::connectWifi() {
     WiFi.enableAP(0);
-    WiFi.hostname(this->hostNameC);
+    char fullHostName[32] = {0};
+    sprintf(fullHostName, "%s_%s", this->prefix.c_str(), this->hostNameC);
+    WiFi.hostname(fullHostName);
     WiFi.begin(this->config.ssid, this->config.password);
 
     unsigned long startTime = millis();
@@ -177,6 +179,7 @@ bool Mokosh::configExists() {
     File configFile = LittleFS.open("/config.json", "r");
 
     if (!configFile) {
+        debugV("config.json does not exist");
         return false;
     } else {
         return true;
@@ -210,29 +213,45 @@ void Mokosh::loop() {
 
 String Mokosh::readConfigString(const char* field) {
     const char* data = this->configJson[field];
+    debugV("Read config.json string field %s, value %s", field, data);
     return String(data);
 }
 
 int Mokosh::readConfigInt(const char* field) {
     int data = this->configJson[field];
+    debugV("Read config.json int field %s, value %d", field, data);
     return data;
 }
 
 float Mokosh::readConfigFloat(const char* field) {
     float data = this->configJson[field];
+    debugV("Read config.json float field %s, value %f", field, data);
     return data;
 }
 
-void Mokosh::setConfig(const char* field, const char* value) {
+void Mokosh::setConfig(const char* field, String value) {
+    debugV("Settings config.json field %s to string %s", field, value.c_str());
+    this->configJson[field] = value;
+}
+
+void Mokosh::setConfig(const char* field, int value) {
+    debugV("Settings config.json field %s to int %d", field, value);
+    this->configJson[field] = value;
+}
+
+void Mokosh::setConfig(const char* field, float value) {
+    debugV("Settings config.json field %s to float %f", field, value);
     this->configJson[field] = value;
 }
 
 void Mokosh::saveConfig() {
+    debugV("Saving config.json");
     File configFile = LittleFS.open("/config.json", "w");
     serializeJson(this->configJson, configFile);
 }
 
-bool Mokosh::configLoad() {
+bool Mokosh::reloadConfig() {
+    debugV("Reloading config.json");
     File configFile = LittleFS.open("/config.json", "r");
 
     if (!configFile) {
@@ -263,6 +282,7 @@ bool Mokosh::configLoad() {
 }
 
 void Mokosh::factoryReset() {
+    debugV("Removing config.json");
     LittleFS.remove("/config.json");
 
     ESP.restart();
@@ -331,7 +351,7 @@ void Mokosh::mqttCommandReceived(char* topic, uint8_t* message, unsigned int len
     }
 
     if (strcmp(msg, "reloadconfig") == 0) {
-        this->configLoad();
+        this->reloadConfig();
 
         return;
     }
@@ -366,6 +386,45 @@ void Mokosh::mqttCommandReceived(char* topic, uint8_t* message, unsigned int len
             float value = this->readConfigFloat(field.c_str());
 
             this->publish(debug_topic.c_str(), value);
+            return;
+        }
+
+        if (msg2.startsWith("setconfigs=")) {
+            String param = msg2.substring(11);
+
+            String field = param.substring(0, param.indexOf('|'));
+            String value = param.substring(param.indexOf('|') + 1);
+
+            debugV("Setting configuration: field: %s, new value: %s", field.c_str(), value.c_str());
+
+            this->setConfig(field.c_str(), value);
+
+            return;
+        }
+
+        if (msg2.startsWith("setconfigi=")) {
+            String param = msg2.substring(11);
+
+            String field = param.substring(0, param.indexOf('|'));
+            String value = param.substring(param.indexOf('|') + 1);
+
+            debugV("Setting configuration: field: %s, new value: %d", field.c_str(), value.toInt());
+
+            this->setConfig(field.c_str(), value.toInt());
+
+            return;
+        }
+
+        if (msg2.startsWith("setconfigf=")) {
+            String param = msg2.substring(11);
+
+            String field = param.substring(0, param.indexOf('|'));
+            String value = param.substring(param.indexOf('|') + 1);
+
+            debugV("Setting configuration: field: %s, new value: %f", field.c_str(), value.toFloat());
+
+            this->setConfig(field.c_str(), value.toFloat());
+
             return;
         }
 
