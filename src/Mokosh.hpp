@@ -27,6 +27,7 @@ typedef struct IntervalEvent {
 
 #define EVENTS_COUNT 10
 #define HEARTBEAT 10000
+#define MINUTES 60000
 
 #define mdebug(lvl, fmt, ...) Mokosh::debug(lvl, __func__, fmt, ##__VA_ARGS__)
 #define mdebugA(fmt, ...) Mokosh::debug(DebugLevel::ANY, __func__, fmt, ##__VA_ARGS__)
