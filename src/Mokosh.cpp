@@ -178,8 +178,7 @@ Mokosh* Mokosh::getInstance() {
 bool Mokosh::configExists() {
     File configFile = LittleFS.open("/config.json", "r");
 
-    if (!configFile) {
-        debugV("config.json does not exist");
+    if (!configFile) {        
         return false;
     } else {
         return true;
@@ -365,6 +364,11 @@ void Mokosh::mqttCommandReceived(char* topic, uint8_t* message, unsigned int len
             return;
         }
 
+        if (msg2 == "saveconfig") {
+            this->saveConfig();
+            return;
+        }
+
         if (msg2.startsWith("showconfigs=")) {
             String field = msg2.substring(12);
             String value = this->readConfigString(field.c_str());
@@ -410,7 +414,7 @@ void Mokosh::mqttCommandReceived(char* topic, uint8_t* message, unsigned int len
 
             debugV("Setting configuration: field: %s, new value: %d", field.c_str(), value.toInt());
 
-            this->setConfig(field.c_str(), value.toInt());
+            this->setConfig(field.c_str(), (int)(value.toInt()));
 
             return;
         }
