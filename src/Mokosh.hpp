@@ -45,6 +45,8 @@ class Mokosh {
     void begin(String prefix);
     void loop();
 
+    void setBuildMetadata(String version, String buildDate);
+
     void publish(const char* subtopic, String payload);
     void publish(const char* subtopic, const char* payload);
     void publish(const char* subtopic, float payload);
@@ -63,7 +65,7 @@ class Mokosh {
     void onInterval(f_interval_t func, unsigned long time);  // uruchom funkcję f co czas time
     void error(int code);
 
-    static Mokosh* getInstance();    
+    static Mokosh* getInstance();
     void factoryReset();
 
     void mqttCommandReceived(char* topic, uint8_t* message, unsigned int length);
@@ -81,7 +83,7 @@ class Mokosh {
     const String heartbeat_topic = "debug/heartbeat";
 
     static MokoshConfiguration CreateConfiguration(const char* ssid, const char* password, const char* broker, uint16_t brokerPort);
-    static void debug(DebugLevel level, const char* func, const char* fmt, ...);    
+    static void debug(DebugLevel level, const char* func, const char* fmt, ...);
 
    private:
     f_error_handler_t errorHandler;
@@ -93,6 +95,8 @@ class Mokosh {
     String prefix;
     MokoshConfiguration config;
     IntervalEvent events[EVENTS_COUNT];
+    String version = "1.0.0";
+    String buildDate = "1970-01-01";
 
     WiFiClient* client;
     PubSubClient* mqtt;
@@ -108,10 +112,9 @@ class Mokosh {
     bool connectWifi();
     bool reconnect();
 
-    void startOTAUpdate(char* version);    
+    void publishShortVersion();
+
+    void startOTAUpdate(char* version);
 
     char ssid[16] = {0};
-    char version[32] = {0};
-    char informationalVersion[100] = {0};
-    char buildDate[11] = {0};
 };

@@ -106,7 +106,7 @@ void Mokosh::begin(String prefix) {
     }
 
     debugI("Sending hello");
-    this->publish(this->version_topic.c_str(), VERSION);
+    this->publishShortVersion();
 
     this->onInterval(_heartbeat, HEARTBEAT);
 
@@ -246,6 +246,17 @@ void Mokosh::factoryReset() {
     ESP.restart();
 }
 
+void Mokosh::publishShortVersion() {
+    int sep = this->version.indexOf('+');
+
+    if (sep != -1) {
+        String ver = this->version.substring(0, sep);
+        this->publish(version_topic.c_str(), ver);
+    } else {
+        this->publish(version_topic.c_str(), this->version);
+    }
+}
+
 void Mokosh::mqttCommandReceived(char* topic, uint8_t* message, unsigned int length) {
     if (strstr(topic, "cmd") == NULL) {
         return;
@@ -260,13 +271,13 @@ void Mokosh::mqttCommandReceived(char* topic, uint8_t* message, unsigned int len
     debugD("Command: %s", msg);
 
     if (strcmp(msg, "gver") == 0) {
-        this->publish(version_topic.c_str(), VERSION);
+        this->publishShortVersion();
 
         return;
     }
 
     if (strcmp(msg, "getfullver") == 0) {
-        this->publish(debug_topic.c_str(), INFORMATIONAL_VERSION);
+        this->publish(debug_topic.c_str(), this->version);
 
         return;
     }
@@ -280,7 +291,7 @@ void Mokosh::mqttCommandReceived(char* topic, uint8_t* message, unsigned int len
     }
 
     if (strcmp(msg, "getbuilddate") == 0) {
-        this->publish(debug_topic.c_str(), BUILD_DATE);
+        this->publish(debug_topic.c_str(), this->buildDate);
 
         return;
     }
@@ -402,4 +413,9 @@ void Mokosh::onCommand(f_command_handler_t handler) {
 
 void Mokosh::enableRebootOnError() {
     this->isRebootOnError = true;
+}
+
+void Mokosh::setBuildMetadata(String version, String buildDate) {
+    this->version = version;
+    this->buildDate = buildDate;
 }
