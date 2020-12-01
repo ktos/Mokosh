@@ -86,7 +86,7 @@ void Mokosh::begin(String prefix) {
 
         this->debugReady = true;
 
-        debugI("IP: %s", WiFi.localIP().toString().c_str());
+        mdebugI("IP: %s", WiFi.localIP().toString().c_str());
     } else {
         this->error(Mokosh::Error_WIFI);
     }
@@ -98,18 +98,18 @@ void Mokosh::begin(String prefix) {
     broker.fromString(this->config.broker);
 
     this->mqtt->setServer(broker, this->config.brokerPort);
-    debugD("MQTT broker set to %s port %d", broker.toString().c_str(), this->config.brokerPort);
+    mdebugD("MQTT broker set to %s port %d", broker.toString().c_str(), this->config.brokerPort);
 
     if (!this->reconnect()) {
         this->error(Mokosh::Error_MQTT);
     }
 
-    debugI("Sending hello");
+    mdebugI("Sending hello");
     this->publishShortVersion();
 
     this->onInterval(_heartbeat, HEARTBEAT);
 
-    debugI("Starting operations...");
+    mdebugI("Starting operations...");
 }
 
 void Mokosh::disableFS() {
@@ -122,7 +122,7 @@ bool Mokosh::reconnect() {
     while (!client->connected()) {
         trials++;
         if (this->mqtt->connect(this->hostNameC)) {
-            debugI("MQTT reconnected");
+            mdebugI("MQTT reconnected");
 
             char cmd_topic[32];
             sprintf(cmd_topic, "%s_%s/%s", this->prefix.c_str(), this->hostNameC, this->cmd_topic.c_str());
@@ -132,7 +132,7 @@ bool Mokosh::reconnect() {
 
             return true;
         } else {
-            debugE("MQTT failed: %d", mqtt->state());
+            mdebugE("MQTT failed: %d", mqtt->state());
 
             // if not connected in the third trial, give up
             if (trials > 3)
@@ -189,7 +189,7 @@ void Mokosh::setDebugLevel(DebugLevel level) {
     this->debugLevel = level;
 
     if (this->debugReady) {
-        debugW("Setting debug level should be before begin(), ignoring for internals.");
+        mdebugW("Setting mdebug level should be before begin(), ignoring for internals.");
     }
 }
 
@@ -199,7 +199,7 @@ void Mokosh::loop() {
     for (uint8_t i = 0; i < EVENTS_COUNT; i++) {
         if (events[i].interval != 0) {
             if (now - events[i].last > events[i].interval) {
-                debugV("Executing interval func %x on time %ld", (unsigned int)events[i].handler, events[i].interval);
+                mdebugV("Executing interval func %x on time %ld", (unsigned int)events[i].handler, events[i].interval);
                 events[i].handler();
                 events[i].last = now;
             }
@@ -212,55 +212,55 @@ void Mokosh::loop() {
 
 String Mokosh::readConfigString(const char* field) {
     const char* data = this->configJson[field];
-    debugV("Read config.json string field %s, value %s", field, data);
+    mdebugV("Read config.json string field %s, value %s", field, data);
     return String(data);
 }
 
 int Mokosh::readConfigInt(const char* field) {
     int data = this->configJson[field];
-    debugV("Read config.json int field %s, value %d", field, data);
+    mdebugV("Read config.json int field %s, value %d", field, data);
     return data;
 }
 
 float Mokosh::readConfigFloat(const char* field) {
     float data = this->configJson[field];
-    debugV("Read config.json float field %s, value %f", field, data);
+    mdebugV("Read config.json float field %s, value %f", field, data);
     return data;
 }
 
 void Mokosh::setConfig(const char* field, String value) {
-    debugV("Settings config.json field %s to string %s", field, value.c_str());
+    mdebugV("Settings config.json field %s to string %s", field, value.c_str());
     this->configJson[field] = value;
 }
 
 void Mokosh::setConfig(const char* field, int value) {
-    debugV("Settings config.json field %s to int %d", field, value);
+    mdebugV("Settings config.json field %s to int %d", field, value);
     this->configJson[field] = value;
 }
 
 void Mokosh::setConfig(const char* field, float value) {
-    debugV("Settings config.json field %s to float %f", field, value);
+    mdebugV("Settings config.json field %s to float %f", field, value);
     this->configJson[field] = value;
 }
 
 void Mokosh::saveConfig() {
-    debugV("Saving config.json");
+    mdebugV("Saving config.json");
     File configFile = LittleFS.open("/config.json", "w");
     serializeJson(this->configJson, configFile);
 }
 
 bool Mokosh::reloadConfig() {
-    debugV("Reloading config.json");
+    mdebugV("Reloading config.json");
     File configFile = LittleFS.open("/config.json", "r");
 
     if (!configFile) {
-        debugE("Cannot open config.json file");
+        mdebugE("Cannot open config.json file");
         return false;
     }
 
     size_t size = configFile.size();
     if (size > 500) {
-        debugE("Config file too large");
+        mdebugE("Config file too large");
         return false;
     }
 
@@ -281,7 +281,7 @@ bool Mokosh::reloadConfig() {
 }
 
 void Mokosh::factoryReset() {
-    debugV("Removing config.json");
+    mdebugV("Removing config.json");
     LittleFS.remove("/config.json");
 
     ESP.restart();
@@ -309,10 +309,16 @@ void Mokosh::mqttCommandReceived(char* topic, uint8_t* message, unsigned int len
     }
     msg[length + 1] = 0;
 
-    debugD("Command: %s", msg);
+    mdebugD("Command: %s", msg);
 
     if (strcmp(msg, "gver") == 0) {
         this->publishShortVersion();
+
+        return;
+    }
+
+    if (strcmp(msg, "mdebug") == 0) {
+        mdebugE("mdebug REQUESTED");
 
         return;
     }
@@ -399,7 +405,7 @@ void Mokosh::mqttCommandReceived(char* topic, uint8_t* message, unsigned int len
             String field = param.substring(0, param.indexOf('|'));
             String value = param.substring(param.indexOf('|') + 1);
 
-            debugV("Setting configuration: field: %s, new value: %s", field.c_str(), value.c_str());
+            mdebugV("Setting configuration: field: %s, new value: %s", field.c_str(), value.c_str());
 
             this->setConfig(field.c_str(), value);
 
@@ -412,7 +418,7 @@ void Mokosh::mqttCommandReceived(char* topic, uint8_t* message, unsigned int len
             String field = param.substring(0, param.indexOf('|'));
             String value = param.substring(param.indexOf('|') + 1);
 
-            debugV("Setting configuration: field: %s, new value: %d", field.c_str(), value.toInt());
+            mdebugV("Setting configuration: field: %s, new value: %d", field.c_str(), value.toInt());
 
             this->setConfig(field.c_str(), (int)(value.toInt()));
 
@@ -425,7 +431,7 @@ void Mokosh::mqttCommandReceived(char* topic, uint8_t* message, unsigned int len
             String field = param.substring(0, param.indexOf('|'));
             String value = param.substring(param.indexOf('|') + 1);
 
-            debugV("Setting configuration: field: %s, new value: %f", field.c_str(), value.toFloat());
+            mdebugV("Setting configuration: field: %s, new value: %f", field.c_str(), value.toFloat());
 
             this->setConfig(field.c_str(), value.toFloat());
 
@@ -440,13 +446,13 @@ void Mokosh::mqttCommandReceived(char* topic, uint8_t* message, unsigned int len
     }
 
     if (this->commandHandler != nullptr) {
-        debugD("Passing message to custom command handler");
+        mdebugD("Passing message to custom command handler");
         this->commandHandler(message, length);
     }
 }
 
 void Mokosh::onInterval(f_interval_t func, unsigned long time) {
-    debugV("Registering interval function %x on time %ld", (unsigned int)func, time);
+    mdebugV("Registering interval function %x on time %ld", (unsigned int)func, time);
 
     IntervalEvent* first = NULL;
     for (uint8_t i = 0; i < EVENTS_COUNT; i++) {
@@ -457,7 +463,7 @@ void Mokosh::onInterval(f_interval_t func, unsigned long time) {
     }
 
     if (first == NULL) {
-        debugW("Interval function cannot be registered, no free space.");
+        mdebugW("Interval function cannot be registered, no free space.");
     } else {
         first->handler = func;
         first->interval = time;
@@ -494,17 +500,17 @@ void Mokosh::error(int code) {
     }
 
     if (this->errorHandler != nullptr) {
-        debugV("Handler called for error %d", code);
+        mdebugV("Handler called for error %d", code);
         this->errorHandler(code);
     } else {
         if (this->isRebootOnError) {
-            debugE("Unhandled error, code: %d, reboot imminent.", code);
+            mdebugE("Unhandled error, code: %d, reboot imminent.", code);
             delay(10000);
             ESP.reset();
         } else {
-            debugE("Unhandled error, code: %d", code);
+            mdebugE("Unhandled error, code: %d", code);
             if (this->debugReady) {
-                debugV("Going loop.");
+                mdebugV("Going loop.");
             } else {
                 Serial.print("Going loop.");
             }
