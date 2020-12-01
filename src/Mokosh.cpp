@@ -178,7 +178,7 @@ Mokosh* Mokosh::getInstance() {
 bool Mokosh::configExists() {
     File configFile = LittleFS.open("/config.json", "r");
 
-    if (!configFile) {        
+    if (!configFile) {
         return false;
     } else {
         return true;

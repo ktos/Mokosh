@@ -1,15 +1,21 @@
 #include <Arduino.h>
+#include <ArduinoJson.h>
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
 #include <RemoteDebug.h>
-#include <ArduinoJson.h>
 
 #include "MokoshConfig.hpp"
 
+// handler for errors, used in onError
 using f_error_handler_t = void (*)(int);
+
+// handler for commands, used in onCommand
 using f_command_handler_t = void (*)(uint8_t*, unsigned int);
+
+// handler for interval functions, used in onInterval
 using f_interval_t = void (*)();
 
+// Debug level - starts from 0 to 6, higher is more severe
 typedef enum DebugLevel {
     PROFILER = 0,
     VERBOSE = 1,
@@ -38,62 +44,143 @@ typedef struct IntervalEvent {
 #define mdebugV(fmt, ...) Mokosh::debug(DebugLevel::VERBOSE, __func__, fmt, ##__VA_ARGS__)
 #define mdebugW(fmt, ...) Mokosh::debug(DebugLevel::WARNING, __func__, fmt, ##__VA_ARGS__)
 
+// the main class for the framework, must be initialized in your code
 class Mokosh {
    public:
     Mokosh();
-    void setConfiguration(MokoshConfiguration config);  // przed begin, jeśli trzeba
-    void setDebugLevel(DebugLevel level);               // przed begin, jeśli trzeba
+    // sets internal configuration (wifi ssid, password, etc.) by hand
+    // instead of reading from config.json
+    // must be called before begin()
+    void setConfiguration(MokoshConfiguration config);
+
+    // sets debug level verbosity, must be called before begin()
+    void setDebugLevel(DebugLevel level);
+
+    // starts Mokosh system, connects to the Wi-Fi and MQTT
+    // using the provided device prefix
     void begin(String prefix);
+
+    // handles MQTT, interval and RemoteDebug loops, must be called
+    // in loop()
     void loop();
 
+    // sets build information (SemVer and build date) used in the
+    // responses to getv and getfullver commands and hello message
+    // must be called before begin()
     void setBuildMetadata(String version, String buildDate);
 
+    // publishes a new message on a Prefix_ABCDE/subtopic topic with
+    // a given payload
     void publish(const char* subtopic, String payload);
+
+    // publishes a new message on a Prefix_ABCDE/subtopic topic with
+    // a given payload
     void publish(const char* subtopic, const char* payload);
+
+    // publishes a new message on a Prefix_ABCDE/subtopic topic with
+    // a given payload
     void publish(const char* subtopic, float payload);
 
+    // returns internal PubSubClient instance
     PubSubClient* getPubSubClient();
 
-    void debug(DebugLevel level, char* func, char* fmt, ...);
-
-    void enableOTA();       // włącza obsługę polecenia OTA
-    void disableFS();       // wyłącza obsługę LittleFS
-    void enableFirstRun();  // włącza tryb first run jeżeli nie ma konfiguracji
-    void enableRebootOnError();
-
-    void onCommand(f_command_handler_t handler);             // przed begin - callback który ma być odpalany na customową komendę
-    void onError(f_error_handler_t handler);                 // przed begin - callback który ma być odpalany na wypadek błędu
-    void onInterval(f_interval_t func, unsigned long time);  // uruchom funkcję f co czas time
-    void error(int code);
-
-    static Mokosh* getInstance();
-    void factoryReset();
-
-    void mqttCommandReceived(char* topic, uint8_t* message, unsigned int length);
-
-    const uint8_t Error_CONFIG = 1;
-    const uint8_t Error_FS = 2;
-    const uint8_t Error_WIFI = 3;
-    const uint8_t Error_BROKER = 4;
-    const uint8_t Error_MQTT = 5;
-    const uint8_t Error_NOTIMPLEMENTED = 6;
-
-    const String cmd_topic = "cmd";
-    const String version_topic = "version";
-    const String debug_topic = "debug";
-    const String heartbeat_topic = "debug/heartbeat";
-
-    static MokoshConfiguration CreateConfiguration(const char* ssid, const char* password, const char* broker, uint16_t brokerPort);
+    // prints message of a desired debug level to RemoteDebug
+    // uses func parameter to be used with __func__ so there will
+    // be printed in what function debug happened
+    // use rather mdebug() macros instead
     static void debug(DebugLevel level, const char* func, const char* fmt, ...);
 
+    // enables OTA subsystem, handling sota command
+    void enableOTA();
+
+    // disables LittleFS and config.json support
+    // must be called before begin()
+    void disableFS();
+
+    // enables FirstRun subsystem if there is no config.json
+    void enableFirstRun();
+
+    // enables automatic reboot on error - by default there will be
+    // an inifinite loop instead
+    void enableRebootOnError();
+
+    // defines callback to be run when command not handled by internal
+    // means is received
+    // must be called before begin()
+    void onCommand(f_command_handler_t handler);
+    
+    // defines callback to be run when error is thrown
+    // must be called before begin()
+    void onError(f_error_handler_t handler);
+
+    // defines callback function func to be run on a specific time interval
+    // Mokosh will automatically fire the function when time (in milliseconds)
+    // occurs since the last run
+    // must be called before begin()
+    void onInterval(f_interval_t func, unsigned long time);
+
+    // throws an error of a given code
+    void error(int code);
+
+    // returns instance of Mokosh singleton
+    static Mokosh* getInstance();
+
+    // removes config.json and reboots, entering FirstRun mode
+    void factoryReset();    
+
+    // error code thrown when config.json file cannot be read properly
+    const uint8_t Error_CONFIG = 1;
+
+    // error code thrown when LittleFS is not available
+    const uint8_t Error_FS = 2;
+
+    // error code thrown when couldn't connect to Wi-Fi    
+    const uint8_t Error_WIFI = 3;
+
+    // error code thrown when MQTT broker connection fails
+    const uint8_t Error_MQTT = 5;    
+
+    // the name of subtopic used for commands
+    const String cmd_topic = "cmd";
+
+    // the name of subtopic used for version hello message
+    const String version_topic = "version";
+
+    // the name of subtopic used for debug purposes
+    const String debug_topic = "debug";
+
+    // the name of subtopic used for heartbeat messages
+    const String heartbeat_topic = "debug/heartbeat";
+
+    // returns an object for usage with setConfiguration() based on given
+    // parameters
+    static MokoshConfiguration CreateConfiguration(const char* ssid, const char* password, const char* broker, uint16_t brokerPort);    
+
+    // reads a given string field from config.json
     String readConfigString(const char* field);
+    
+    // reads a given int field from config.json
     int readConfigInt(const char* field);
+
+    // reads a given float field from config.json
     float readConfigFloat(const char* field);
+
+    // sets a configuration field to a given value
     void setConfig(const char* field, String value);
+
+    // sets a configuration field to a given value
     void setConfig(const char* field, int value);
+
+    // sets a configuration field to a given value
     void setConfig(const char* field, float value);
+
+    // saves configuration to a config.json file
     void saveConfig();
+
+    // reads configuration from a config.json file
     bool reloadConfig();
+
+    void mqttCommandReceived(char* topic, uint8_t* message, unsigned int length);
 
    private:
     f_error_handler_t errorHandler;
@@ -119,9 +206,9 @@ class Mokosh {
     DebugLevel debugLevel = DebugLevel::WARNING;
 
     bool configExists();
-    bool isConfigurationSet();    
+    bool isConfigurationSet();
     bool connectWifi();
-    bool reconnect();
+    bool reconnect();    
 
     void publishShortVersion();
 
