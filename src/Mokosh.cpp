@@ -107,9 +107,20 @@ void Mokosh::begin(String prefix) {
     mdebugI("Sending hello");
     this->publishShortVersion();
 
+    mdebugD("Sending IP");
+    this->publishIP();
+
     this->onInterval(_heartbeat, HEARTBEAT);
 
     mdebugI("Starting operations...");
+}
+
+void Mokosh::publishIP() {
+    char msg[64] = {0};
+    char ipbuf[15] = { 0 };
+    WiFi.localIP().toString().toCharArray(ipbuf, 15);    
+    int pos = snprintf(msg, sizeof(msg) - 1, "{\"ipaddress\": \"%s\"}", ipbuf);
+    this->publish(debug_ip_topic.c_str(), msg);
 }
 
 void Mokosh::disableFS() {
@@ -311,7 +322,7 @@ void Mokosh::mqttCommandReceived(char* topic, uint8_t* message, unsigned int len
 
     mdebugD("Command: %s", msg);
 
-    if (strcmp(msg, "gver") == 0) {
+    if (strcmp(msg, "gver") == 0 || strcmp(msg, "getver") == 0) {
         this->publishShortVersion();
 
         return;
@@ -323,8 +334,14 @@ void Mokosh::mqttCommandReceived(char* topic, uint8_t* message, unsigned int len
         return;
     }
 
+    if (strcmp(msg, "getip") == 0) {
+        this->publishIP();
+
+        return;
+    }
+
     if (strcmp(msg, "getfullver") == 0) {
-        this->publish(debug_topic.c_str(), this->version);
+        this->publish(debug_response_topic.c_str(), this->version);
 
         return;
     }
@@ -332,13 +349,13 @@ void Mokosh::mqttCommandReceived(char* topic, uint8_t* message, unsigned int len
     if (strcmp(msg, "gmd5") == 0) {
         char md5[128];
         ESP.getSketchMD5().toCharArray(md5, 128);
-        this->publish(debug_topic.c_str(), md5);
+        this->publish(debug_response_topic.c_str(), md5);
 
         return;
     }
 
     if (strcmp(msg, "getbuilddate") == 0) {
-        this->publish(debug_topic.c_str(), this->buildDate);
+        this->publish(debug_response_topic.c_str(), this->buildDate);
 
         return;
     }
@@ -379,7 +396,7 @@ void Mokosh::mqttCommandReceived(char* topic, uint8_t* message, unsigned int len
             String field = msg2.substring(12);
             String value = this->readConfigString(field.c_str());
 
-            this->publish(debug_topic.c_str(), value);
+            this->publish(debug_response_topic.c_str(), value);
             return;
         }
 
@@ -387,7 +404,7 @@ void Mokosh::mqttCommandReceived(char* topic, uint8_t* message, unsigned int len
             String field = msg2.substring(12);
             int value = this->readConfigInt(field.c_str());
 
-            this->publish(debug_topic.c_str(), value);
+            this->publish(debug_response_topic.c_str(), value);
             return;
         }
 
@@ -395,7 +412,7 @@ void Mokosh::mqttCommandReceived(char* topic, uint8_t* message, unsigned int len
             String field = msg2.substring(12);
             float value = this->readConfigFloat(field.c_str());
 
-            this->publish(debug_topic.c_str(), value);
+            this->publish(debug_response_topic.c_str(), value);
             return;
         }
 

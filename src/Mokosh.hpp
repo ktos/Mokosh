@@ -149,6 +149,12 @@ class Mokosh {
     // the name of subtopic used for debug purposes
     const String debug_topic = "debug";
 
+    // the name of subtopic used for hello packet with IP
+    const String debug_ip_topic = "debug/ip";
+
+    // the name of subtopic used as generic response to commands
+    const String debug_response_topic = "debug/cmdresp";
+
     // the name of subtopic used for heartbeat messages
     const String heartbeat_topic = "debug/heartbeat";
 
@@ -211,6 +217,7 @@ class Mokosh {
     bool reconnect();    
 
     void publishShortVersion();
+    void publishIP();
 
     void startOTAUpdate(char* version);
 
