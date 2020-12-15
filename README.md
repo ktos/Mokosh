@@ -15,8 +15,8 @@ This version of Mokosh is heavily in development.
 ## Usage
 
 Code is prepared for the Arduino platform, building is tested on arduino-cli,
-currently 0.13. Prepared only for ESP8266, tested on NodeMCU, WeMos D1 R2 and
-ESP-01S.
+currently 0.13. Prepared for ESP8266 and ESP32, tested on NodeMCU, WeMos D1 R2,
+ESP-01S and ESP32-WROOM-32D.
 
 You have to just include the main file somewhere in the beginning of your
 Arduino sketch:

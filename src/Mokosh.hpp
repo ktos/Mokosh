@@ -1,6 +1,8 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
-#include <ESP8266WiFi.h>
+#if defined(ESP8266)
+    #include <ESP8266WiFi.h>
+#endif
 #include <PubSubClient.h>
 #include <RemoteDebug.h>
 

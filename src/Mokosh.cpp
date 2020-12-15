@@ -1,7 +1,13 @@
 #include "Mokosh.hpp"
 
+#if defined(ESP8266)
 #include <ESP8266httpUpdate.h>
 #include <LittleFS.h>
+#endif
+
+#if defined(ESP32)
+#include <LITTLEFS.h>
+#endif
 
 static Mokosh* _instance;
 
@@ -60,15 +66,30 @@ void Mokosh::begin(String prefix) {
     Serial.println(".");
 
     char hostString[16] = {0};
+#if defined(ESP8266)
     sprintf(hostString, "%06X", ESP.getChipId());
+#endif
+
+#if defined(ESP32)
+    // strange bit manipulations to extract only 24 bits of MAC
+    // like in ESP8266
+    sprintf(hostString, "%06X", ((uint32_t)ESP.getEfuseMac()<<8)>>8);
+#endif
 
     this->prefix = prefix;
     this->hostName = String(hostString);
     strcpy(this->hostNameC, hostName.c_str());
 
     if (this->isFSEnabled) {
+#if defined(ESP8266)
         if (!LittleFS.begin()) {
-            this->error(Mokosh::Error_FS);
+            if (!LittleFS.format()) {
+#else
+        if (!LITTLEFS.begin()) {
+            if (!LITTLEFS.format()) {
+#endif
+                this->error(Mokosh::Error_FS);
+            }
         }
 
         if (!this->isConfigurationSet()) {
@@ -117,8 +138,8 @@ void Mokosh::begin(String prefix) {
 
 void Mokosh::publishIP() {
     char msg[64] = {0};
-    char ipbuf[15] = { 0 };
-    WiFi.localIP().toString().toCharArray(ipbuf, 15);    
+    char ipbuf[15] = {0};
+    WiFi.localIP().toString().toCharArray(ipbuf, 15);
     int pos = snprintf(msg, sizeof(msg) - 1, "{\"ipaddress\": \"%s\"}", ipbuf);
     this->publish(debug_ip_topic.c_str(), msg);
 }
@@ -169,7 +190,13 @@ bool Mokosh::connectWifi() {
     WiFi.enableAP(0);
     char fullHostName[32] = {0};
     sprintf(fullHostName, "%s_%s", this->prefix.c_str(), this->hostNameC);
+#if defined(ESP8266)
     WiFi.hostname(fullHostName);
+#else
+    // workaround for https://github.com/espressif/arduino-esp32/issues/2537
+    WiFi.config(INADDR_NONE, INADDR_NONE, INADDR_NONE);
+    WiFi.setHostname(fullHostName);
+#endif
     WiFi.begin(this->config.ssid, this->config.password);
 
     unsigned long startTime = millis();
@@ -187,7 +214,11 @@ Mokosh* Mokosh::getInstance() {
 }
 
 bool Mokosh::configExists() {
+#if defined(ESP8266)
     File configFile = LittleFS.open("/config.json", "r");
+#else
+    File configFile = LITTLEFS.open("/config.json", "r");
+#endif
 
     if (!configFile) {
         return false;
@@ -256,13 +287,21 @@ void Mokosh::setConfig(const char* field, float value) {
 
 void Mokosh::saveConfig() {
     mdebugV("Saving config.json");
+    #if defined(ESP8266)
     File configFile = LittleFS.open("/config.json", "w");
+    #else
+    File configFile = LITTLEFS.open("/config.json", "w");
+    #endif
     serializeJson(this->configJson, configFile);
 }
 
 bool Mokosh::reloadConfig() {
     mdebugV("Reloading config.json");
+    #if defined(ESP8266)
     File configFile = LittleFS.open("/config.json", "r");
+    #else
+    File configFile = LITTLEFS.open("/config.json", "r");
+    #endif
 
     if (!configFile) {
         mdebugE("Cannot open config.json file");
@@ -293,7 +332,11 @@ bool Mokosh::reloadConfig() {
 
 void Mokosh::factoryReset() {
     mdebugV("Removing config.json");
+    #if defined(ESP8266)
     LittleFS.remove("/config.json");
+    #else
+    LITTLEFS.remove("/config.json");
+    #endif
 
     ESP.restart();
 }
@@ -523,7 +566,7 @@ void Mokosh::error(int code) {
         if (this->isRebootOnError) {
             mdebugE("Unhandled error, code: %d, reboot imminent.", code);
             delay(10000);
-            ESP.reset();
+            ESP.restart();
         } else {
             mdebugE("Unhandled error, code: %d", code);
             if (this->debugReady) {
