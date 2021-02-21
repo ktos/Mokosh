@@ -149,6 +149,9 @@ void Mokosh::disableFS() {
 }
 
 bool Mokosh::reconnect() {
+    if (client->connected())
+        return true;
+
     uint8_t trials = 0;
 
     while (!client->connected()) {
@@ -541,6 +544,10 @@ void Mokosh::publish(const char* subtopic, String payload) {
 void Mokosh::publish(const char* subtopic, const char* payload) {
     char topic[60] = {0};
     sprintf(topic, "%s_%s/%s", this->prefix.c_str(), this->hostNameC, subtopic);
+
+    if (!this->client->connected()) {
+        this->reconnect();        
+    }
 
     this->mqtt->publish(topic, payload);
 }
