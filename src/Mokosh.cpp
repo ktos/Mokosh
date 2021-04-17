@@ -1,13 +1,12 @@
 #include "Mokosh.hpp"
 
 #if defined(ESP8266)
-#include <ESP8266httpUpdate.h>
 #include <LittleFS.h>
 #endif
 
 #if defined(ESP32)
 #include <SPIFFS.h>
-#define LITTLEFS SPIFFS
+#define LittleFS SPIFFS
 #endif
 
 static Mokosh* _instance;
@@ -74,7 +73,7 @@ void Mokosh::begin(String prefix) {
 #if defined(ESP32)
     // strange bit manipulations to extract only 24 bits of MAC
     // like in ESP8266
-    sprintf(hostString, "%06X", ((uint32_t)ESP.getEfuseMac()<<8)>>8);
+    sprintf(hostString, "%06X", ((uint32_t)ESP.getEfuseMac() << 8) >> 8);
 #endif
 
     this->prefix = prefix;
@@ -82,13 +81,8 @@ void Mokosh::begin(String prefix) {
     strcpy(this->hostNameC, hostName.c_str());
 
     if (this->isFSEnabled) {
-#if defined(ESP8266)
         if (!LittleFS.begin()) {
             if (!LittleFS.format()) {
-#else
-        if (!LITTLEFS.begin()) {
-            if (!LITTLEFS.format()) {
-#endif
                 this->error(Mokosh::Error_FS);
             }
         }
@@ -220,11 +214,7 @@ Mokosh* Mokosh::getInstance() {
 }
 
 bool Mokosh::configExists() {
-#if defined(ESP8266)
     File configFile = LittleFS.open("/config.json", "r");
-#else
-    File configFile = LITTLEFS.open("/config.json", "r");
-#endif
 
     if (!configFile) {
         return false;
@@ -293,21 +283,13 @@ void Mokosh::setConfig(const char* field, float value) {
 
 void Mokosh::saveConfig() {
     mdebugV("Saving config.json");
-    #if defined(ESP8266)
     File configFile = LittleFS.open("/config.json", "w");
-    #else
-    File configFile = LITTLEFS.open("/config.json", "w");
-    #endif
     serializeJson(this->configJson, configFile);
 }
 
 bool Mokosh::reloadConfig() {
     mdebugV("Reloading config.json");
-    #if defined(ESP8266)
     File configFile = LittleFS.open("/config.json", "r");
-    #else
-    File configFile = LITTLEFS.open("/config.json", "r");
-    #endif
 
     if (!configFile) {
         mdebugE("Cannot open config.json file");
@@ -338,11 +320,7 @@ bool Mokosh::reloadConfig() {
 
 void Mokosh::factoryReset() {
     mdebugV("Removing config.json");
-    #if defined(ESP8266)
     LittleFS.remove("/config.json");
-    #else
-    LITTLEFS.remove("/config.json");
-    #endif
 
     ESP.restart();
 }
@@ -549,7 +527,7 @@ void Mokosh::publish(const char* subtopic, const char* payload) {
     sprintf(topic, "%s_%s/%s", this->prefix.c_str(), this->hostNameC, subtopic);
 
     if (!this->client->connected()) {
-        this->reconnect();        
+        this->reconnect();
     }
 
     this->mqtt->publish(topic, payload);
