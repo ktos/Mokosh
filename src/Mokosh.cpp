@@ -7,6 +7,7 @@
 #if defined(ESP32)
 #include <SPIFFS.h>
 #define LittleFS SPIFFS
+#include <ESPmDNS.h>
 #endif
 
 static Mokosh* _instance;
@@ -39,6 +40,8 @@ Mokosh::Mokosh() {
     // initialize interval events table
     for (uint8_t i = 0; i < EVENTS_COUNT; i++)
         events[i].interval = 0;
+
+    //this->OTA = new MokoshOTAConfiguration();
 }
 
 void Mokosh::debug(DebugLevel level, const char* func, const char* fmt, ...) {
@@ -120,6 +123,61 @@ void Mokosh::begin(String prefix) {
 
     if (!this->reconnect()) {
         this->error(Mokosh::Error_MQTT);
+    }
+
+    if (this->isOTAEnabled) {
+        mdebugV("OTA is enabled. OTA port: %d", this->OTA.port);
+        ArduinoOTA.setPort(this->OTA.port);
+        ArduinoOTA.setHostname(this->hostNameC);
+
+        MokoshOTAConfiguration moc = this->OTA;
+
+        ArduinoOTA
+            .onStart([moc]() {
+                String type;
+                if (ArduinoOTA.getCommand() == U_FLASH) {
+                    type = "sketch";
+                } else {
+                    // U_SPIFFS
+                    type = "filesystem";
+                    LittleFS.end();
+                }
+                mdebugI("OTA started. Updating %s", type.c_str());
+                if (moc.onStart != nullptr)
+                    moc.onStart();
+            });
+
+        ArduinoOTA.onEnd([moc]() {
+            mdebugI("OTA finished.");
+            LittleFS.begin();
+            if (moc.onEnd != nullptr)
+                moc.onEnd();
+        });
+
+        ArduinoOTA.onProgress([moc](unsigned int progress, unsigned int total) {
+            mdebugV("OTA progress: %u%%\n", (progress / (total / 100)));
+            if (moc.onProgress != nullptr)
+                moc.onProgress(progress, total);
+        });
+
+        ArduinoOTA.onError([moc](ota_error_t error) {
+            mdebugE("OTA failed with error %u", error);
+            if (error == OTA_AUTH_ERROR)
+                mdebugE("Auth Failed");
+            else if (error == OTA_BEGIN_ERROR)
+                mdebugE("Begin Failed");
+            else if (error == OTA_CONNECT_ERROR)
+                mdebugE("Connect Failed");
+            else if (error == OTA_RECEIVE_ERROR)
+                mdebugE("Receive Failed");
+            else if (error == OTA_END_ERROR)
+                mdebugE("End Failed");
+
+            if (moc.onError != nullptr)
+                moc.onError(error);
+        });
+
+        ArduinoOTA.begin();
     }
 
     mdebugI("Sending hello");
@@ -246,6 +304,7 @@ void Mokosh::loop() {
 
     this->mqtt->loop();
     Debug.handle();
+    ArduinoOTA.handle();
 }
 
 String Mokosh::readConfigString(const char* field) {
@@ -581,4 +640,8 @@ void Mokosh::enableRebootOnError() {
 void Mokosh::setBuildMetadata(String version, String buildDate) {
     this->version = version;
     this->buildDate = buildDate;
+}
+
+void Mokosh::enableOTA() {
+    this->isOTAEnabled = true;
 }

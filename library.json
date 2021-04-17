@@ -31,6 +31,10 @@
         {
             "name": "PubSubClient",
             "version": "2.7.0"
+        },
+        {
+            "name": "ArduinoOTA",
+            "version": "^1.0.6"
         }
     ],
     "examples": [

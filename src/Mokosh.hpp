@@ -5,8 +5,10 @@
 #endif
 #include <PubSubClient.h>
 #include <RemoteDebug.h>
+#include <ArduinoOTA.h>
 
 #include "MokoshConfig.hpp"
+#include "MokoshOTAConfig.hpp"
 
 // handler for errors, used in onError
 using f_error_handler_t = void (*)(int);
@@ -92,7 +94,8 @@ class Mokosh {
     // use rather mdebug() macros instead
     static void debug(DebugLevel level, const char* func, const char* fmt, ...);
 
-    // enables OTA subsystem, handling sota command
+    // enables ArduinoOTA subsystem
+    // must be called before begin()    
     void enableOTA();
 
     // disables LittleFS and config.json support
@@ -190,6 +193,9 @@ class Mokosh {
 
     void mqttCommandReceived(char* topic, uint8_t* message, unsigned int length);
 
+    // property with all possible OTA parameters
+    MokoshOTAConfiguration OTA;
+
    private:
     f_error_handler_t errorHandler;
     f_command_handler_t commandHandler;
@@ -210,6 +216,8 @@ class Mokosh {
 
     bool isFSEnabled = true;
     bool isRebootOnError = false;
+    bool isOTAEnabled = false;
+    bool isOTAInProgress = false;
 
     DebugLevel debugLevel = DebugLevel::WARNING;
 
@@ -219,9 +227,7 @@ class Mokosh {
     bool reconnect();
 
     void publishShortVersion();
-    void publishIP();
+    void publishIP();    
 
-    void startOTAUpdate(char* version);
-
-    char ssid[16] = {0};
+    char ssid[16] = {0};    
 };
