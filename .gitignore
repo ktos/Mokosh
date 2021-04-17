@@ -33,7 +33,11 @@
 *.elf
 *.bin
 
+# Packages
+*.tar.gz
+
 /**/.vscode
+/**/config.json
 
 BuildConfig.h
 BuildVersion.h
