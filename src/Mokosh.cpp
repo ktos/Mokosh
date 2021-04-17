@@ -6,7 +6,8 @@
 #endif
 
 #if defined(ESP32)
-#include <LITTLEFS.h>
+#include <SPIFFS.h>
+#define LITTLEFS SPIFFS
 #endif
 
 static Mokosh* _instance;

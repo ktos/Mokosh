@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #if defined(ESP8266)
-    #include <ESP8266WiFi.h>
+#include <ESP8266WiFi.h>
 #endif
 #include <PubSubClient.h>
 #include <RemoteDebug.h>
@@ -110,7 +110,7 @@ class Mokosh {
     // means is received
     // must be called before begin()
     void onCommand(f_command_handler_t handler);
-    
+
     // defines callback to be run when error is thrown
     // must be called before begin()
     void onError(f_error_handler_t handler);
@@ -128,7 +128,7 @@ class Mokosh {
     static Mokosh* getInstance();
 
     // removes config.json and reboots, entering FirstRun mode
-    void factoryReset();    
+    void factoryReset();
 
     // error code thrown when config.json file cannot be read properly
     const uint8_t Error_CONFIG = 1;
@@ -136,11 +136,11 @@ class Mokosh {
     // error code thrown when LittleFS is not available
     const uint8_t Error_FS = 2;
 
-    // error code thrown when couldn't connect to Wi-Fi    
+    // error code thrown when couldn't connect to Wi-Fi
     const uint8_t Error_WIFI = 3;
 
     // error code thrown when MQTT broker connection fails
-    const uint8_t Error_MQTT = 5;    
+    const uint8_t Error_MQTT = 5;
 
     // the name of subtopic used for commands
     const String cmd_topic = "cmd";
@@ -162,11 +162,11 @@ class Mokosh {
 
     // returns an object for usage with setConfiguration() based on given
     // parameters
-    static MokoshConfiguration CreateConfiguration(const char* ssid, const char* password, const char* broker, uint16_t brokerPort);    
+    static MokoshConfiguration CreateConfiguration(const char* ssid, const char* password, const char* broker, uint16_t brokerPort);
 
     // reads a given string field from config.json
     String readConfigString(const char* field);
-    
+
     // reads a given int field from config.json
     int readConfigInt(const char* field);
 
@@ -216,7 +216,7 @@ class Mokosh {
     bool configExists();
     bool isConfigurationSet();
     bool connectWifi();
-    bool reconnect();    
+    bool reconnect();
 
     void publishShortVersion();
     void publishIP();
