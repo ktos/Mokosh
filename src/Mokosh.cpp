@@ -145,34 +145,37 @@ void Mokosh::begin(String prefix) {
                 mdebugI("OTA started. Updating %s", type.c_str());
                 if (moc.onStart != nullptr)
                     moc.onStart();
-            })
-            .onEnd([moc]() {
-                mdebugI("OTA finished.");
-                LittleFS.begin();
-                if (moc.onEnd != nullptr)
-                    moc.onEnd();
-            })
-            .onProgress([moc](unsigned int progress, unsigned int total) {
-                mdebugV("OTA progress: %u%%\n", (progress / (total / 100)));
-                if (moc.onProgress != nullptr)
-                    moc.onProgress(progress, total);
-            })
-            .onError([moc](ota_error_t error) {
-                mdebugE("OTA failed with error %u", error);
-                if (error == OTA_AUTH_ERROR)
-                    mdebugE("Auth Failed");
-                else if (error == OTA_BEGIN_ERROR)
-                    mdebugE("Begin Failed");
-                else if (error == OTA_CONNECT_ERROR)
-                    mdebugE("Connect Failed");
-                else if (error == OTA_RECEIVE_ERROR)
-                    mdebugE("Receive Failed");
-                else if (error == OTA_END_ERROR)
-                    mdebugE("End Failed");
-
-                if (moc.onError != nullptr)
-                    moc.onError(error);
             });
+
+        ArduinoOTA.onEnd([moc]() {
+            mdebugI("OTA finished.");
+            LittleFS.begin();
+            if (moc.onEnd != nullptr)
+                moc.onEnd();
+        });
+
+        ArduinoOTA.onProgress([moc](unsigned int progress, unsigned int total) {
+            mdebugV("OTA progress: %u%%\n", (progress / (total / 100)));
+            if (moc.onProgress != nullptr)
+                moc.onProgress(progress, total);
+        });
+
+        ArduinoOTA.onError([moc](ota_error_t error) {
+            mdebugE("OTA failed with error %u", error);
+            if (error == OTA_AUTH_ERROR)
+                mdebugE("Auth Failed");
+            else if (error == OTA_BEGIN_ERROR)
+                mdebugE("Begin Failed");
+            else if (error == OTA_CONNECT_ERROR)
+                mdebugE("Connect Failed");
+            else if (error == OTA_RECEIVE_ERROR)
+                mdebugE("Receive Failed");
+            else if (error == OTA_END_ERROR)
+                mdebugE("End Failed");
+
+            if (moc.onError != nullptr)
+                moc.onError(error);
+        });
 
         ArduinoOTA.begin();
     }
