@@ -105,6 +105,8 @@ void Mokosh::begin(String prefix) {
     if (this->connectWifi()) {
         Debug.begin(this->hostName, (uint8_t)this->debugLevel);
         Debug.setSerialEnabled(true);
+        Debug.setResetCmdEnabled(true);
+        Debug.showTime(true);
 
         this->debugReady = true;
 
