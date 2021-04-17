@@ -195,7 +195,8 @@ void Mokosh::publishIP() {
     char msg[64] = {0};
     char ipbuf[15] = {0};
     WiFi.localIP().toString().toCharArray(ipbuf, 15);
-    int pos = snprintf(msg, sizeof(msg) - 1, "{\"ipaddress\": \"%s\"}", ipbuf);
+    snprintf(msg, sizeof(msg) - 1, "{\"ipaddress\": \"%s\"}", ipbuf);
+    
     this->publish(debug_ip_topic.c_str(), msg);
 }
 

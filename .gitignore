@@ -39,5 +39,7 @@
 /**/.vscode
 /**/config.json
 
+/examples/pio_test
+
 BuildConfig.h
 BuildVersion.h
