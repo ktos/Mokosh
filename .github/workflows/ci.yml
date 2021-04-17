@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:        
-        example: [examples/**/*.ino]
+        example: [examples/DebugBasic/DebugBasic.ino, examples/ErrorBasic/ErrorBasic.ino, examples/IntervalBasic/IntervalBasic.ino, examples/WifiMqtt/WifiMqtt.ino]
 
     steps:
     - uses: actions/checkout@v2
