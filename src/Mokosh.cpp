@@ -582,6 +582,10 @@ void Mokosh::publish(const char* subtopic, String payload) {
 }
 
 void Mokosh::publish(const char* subtopic, const char* payload) {
+    this->publish(subtopic, payload, false);
+}
+
+void Mokosh::publish(const char* subtopic, const char* payload, boolean retained) {
     char topic[60] = {0};
     sprintf(topic, "%s_%s/%s", this->prefix.c_str(), this->hostNameC, subtopic);
 
@@ -589,7 +593,7 @@ void Mokosh::publish(const char* subtopic, const char* payload) {
         this->reconnect();
     }
 
-    this->mqtt->publish(topic, payload);
+    this->mqtt->publish(topic, payload, retained);
 }
 
 void Mokosh::publish(const char* subtopic, float payload) {
@@ -615,9 +619,11 @@ void Mokosh::error(int code) {
             delay(10000);
             ESP.restart();
         } else {
-            mdebugE("Unhandled error, code: %d", code);
+            mdebugE("Unhandled error, code: %d, going loop.", code);
             if (this->debugReady) {
-                mdebugV("Going loop.");
+                if (this->client->connected() && this->mqtt->state() == MQTT_CONNECTED) {                                        
+                    this->publish(this->heartbeat_topic.c_str(), "error_loop", true);
+                }                
             } else {
                 Serial.print("Going loop.");
             }

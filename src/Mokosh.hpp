@@ -82,6 +82,10 @@ class Mokosh {
     void publish(const char* subtopic, const char* payload);
 
     // publishes a new message on a Prefix_ABCDE/subtopic topic with
+    // a given payload, allows to specify if payload should be retained
+    void publish(const char* subtopic, const char* payload, boolean retained);
+
+    // publishes a new message on a Prefix_ABCDE/subtopic topic with
     // a given payload
     void publish(const char* subtopic, float payload);
 
