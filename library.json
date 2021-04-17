@@ -1,0 +1,39 @@
+{
+    "name": "Mokosh",
+    "keywords": "iot",
+    "description": "Framework for ESP8266/ESP32 with support for simple scheduler, configuration, MQTT and RemoteDebug",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/ktos/Mokosh"
+    },
+    "authors": [
+        {
+            "name": "Marcin Badurowicz",
+            "email": "ktos@ktos.info",
+            "maintainer": true
+        }
+    ],
+    "version": "0.5.0",
+    "frameworks": "arduino",
+    "platforms": [
+        "espressif8266",
+        "espressif32"
+    ],
+    "dependencies": [
+        {
+            "name": "ArduinoJson",
+            "version": "~6.17.2"
+        },
+        {
+            "name": "RemoteDebug",
+            "version": "~3.0.5"
+        },
+        {
+            "name": "PubSubClient",
+            "version": "2.7.0"
+        }
+    ],
+    "examples": [
+        "examples/*/*.ino"
+    ]
+}
