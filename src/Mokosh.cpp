@@ -21,7 +21,6 @@ void _heartbeat() {
 }
 
 RemoteDebug Debug;
-bool Mokosh::debugReady = false;
 
 MokoshConfiguration Mokosh::CreateConfiguration(const char* ssid, const char* password, const char* broker, uint16_t brokerPort) {
     MokoshConfiguration mc;
@@ -50,7 +49,7 @@ void Mokosh::debug(DebugLevel level, const char* func, const char* fmt, ...) {
     vsprintf(dest, fmt, argptr);
     va_end(argptr);
 
-    if (!Mokosh::isDebugReady()) {
+    if (!_instance->isDebugReady()) {
         Serial.printf("(%s) %s [local debug]\n", func, dest);
     }
 
@@ -60,7 +59,7 @@ void Mokosh::debug(DebugLevel level, const char* func, const char* fmt, ...) {
 }
 
 bool Mokosh::isDebugReady() {
-    return false;
+    return this->debugReady;
 }
 
 void Mokosh::setConfiguration(MokoshConfiguration config) {
@@ -112,7 +111,7 @@ void Mokosh::begin(String prefix) {
         Debug.setResetCmdEnabled(true);
         Debug.showTime(true);
 
-        Mokosh::debugReady = true;
+        this->debugReady = true;
 
         mdebugI("IP: %s", WiFi.localIP().toString().c_str());
     } else {
@@ -219,7 +218,7 @@ void Mokosh::disableFS() {
 bool Mokosh::reconnect() {
     if (this->mqtt->connected())
         return true;
-    
+
     if (!this->isWifiConnected() && this->isForceWifiReconnect) {
         mdebugV("Wi-Fi is not connected at all, forcing reconnect.");
         bool result = this->connectWifi();
@@ -231,7 +230,6 @@ bool Mokosh::reconnect() {
             }
         }
     }
-
 
     uint8_t trials = 0;
 
@@ -301,7 +299,7 @@ bool Mokosh::connectWifi() {
         Serial.print(".");
         delay(250);
     }
-    
+
     bool status = WiFi.status() == WL_CONNECTED;
 
     if (status == true) {
@@ -330,7 +328,7 @@ bool Mokosh::configExists() {
 void Mokosh::setDebugLevel(DebugLevel level) {
     this->debugLevel = level;
 
-    if (Mokosh::debugReady) {
+    if (this->debugReady) {
         mdebugW("Setting mdebug level should be before begin(), ignoring for internals.");
     }
 }
@@ -652,7 +650,7 @@ void Mokosh::publish(const char* subtopic, float payload) {
 }
 
 void Mokosh::error(int code) {
-    if (!Mokosh::debugReady) {
+    if (!this->debugReady) {
         Serial.print("Critical error: ");
         Serial.print(code);
         Serial.println(", debug not ready.");
@@ -668,7 +666,7 @@ void Mokosh::error(int code) {
             ESP.restart();
         } else {
             mdebugE("Unhandled error, code: %d, going loop.", code);
-            if (Mokosh::debugReady) {
+            if (this->debugReady) {
                 if (this->client->connected() && this->mqtt->state() == MQTT_CONNECTED) {
                     this->publish(this->heartbeat_topic.c_str(), "error_loop", true);
                 }

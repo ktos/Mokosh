@@ -209,7 +209,7 @@ class Mokosh {
     void setForceWiFiReconnect(bool value);
 
     // returns if the RemoteDebug is ready
-    static bool isDebugReady();
+    bool isDebugReady();
 
     // returns if Wi-Fi is connected at all
     bool isWifiConnected();
@@ -218,7 +218,7 @@ class Mokosh {
     f_error_handler_t errorHandler;
     f_command_handler_t commandHandler;
 
-    static bool debugReady;
+    bool debugReady;
     String hostName;
     char hostNameC[32];
     String prefix;
