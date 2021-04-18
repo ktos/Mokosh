@@ -65,12 +65,17 @@ bool Mokosh::configureMqttClient() {
         mdebugE("MQTT configuration is not provided!");
         return false;
     }
-
-    broker.fromString(brokerAddress);
     uint16_t brokerPort = this->config.getInt(this->config.key_broker_port, 1883);
 
-    this->mqtt->setServer(broker, brokerPort);
-    mdebugD("MQTT broker set to %s port %d", broker.toString().c_str(), brokerPort);
+    // it it is an IP address
+    if (broker.fromString(brokerAddress)) {
+        this->mqtt->setServer(broker, brokerPort);
+        mdebugD("MQTT broker set to %s port %d", broker.toString().c_str(), brokerPort);
+    } else {
+        // so it must be a domain name
+        this->mqtt->setServer(brokerAddress.c_str(), brokerPort);
+        mdebugD("MQTT broker set to %s port %d", brokerAddress.c_str(), brokerPort);
+    }
 
     this->isMqttConfigured = true;
     return true;
