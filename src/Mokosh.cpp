@@ -191,7 +191,7 @@ void Mokosh::hello() {
     this->onInterval([&]() {
         publish(_instance->heartbeat_topic.c_str(), millis());
     },
-                     HEARTBEAT, "HEARTBEAT");
+                     HEARTBEAT, "MOKOSH_HEARTBEAT");
 }
 
 void Mokosh::begin(String prefix, bool autoconnect) {
@@ -610,11 +610,19 @@ void Mokosh::onInterval(THandlerFunction func, unsigned long time, String name) 
     mdebugV("Registering interval function %s on time %ld", name.c_str(), time);
 
     IntervalEvent* first = NULL;
-
     for (uint8_t i = 0; i < EVENTS_COUNT; i++) {
-        if (events[i].interval == 0) {
+        if (events[i].name == name) {
             first = &events[i];
             break;
+        }
+    }
+
+    if (first == NULL) {
+        for (uint8_t i = 0; i < EVENTS_COUNT; i++) {
+            if (events[i].interval == 0) {
+                first = &events[i];
+                break;
+            }
         }
     }
 
