@@ -151,22 +151,22 @@ class Mokosh {
     void factoryReset();
 
     // the name of subtopic used for commands
-    const String cmd_topic = "cmd";
+    const char* cmd_topic = "cmd";
 
     // the name of subtopic used for version hello message
-    const String version_topic = "version";
+    const char* version_topic = "version";
 
     // the name of subtopic used for debug purposes
-    const String debug_topic = "debug";
+    const char* debug_topic = "debug";
 
     // the name of subtopic used for hello packet with IP
-    const String debug_ip_topic = "debug/ip";
+    const char* debug_ip_topic = "debug/ip";
 
     // the name of subtopic used as generic response to commands
-    const String debug_response_topic = "debug/cmdresp";
+    const char* debug_response_topic = "debug/cmdresp";
 
     // the name of subtopic used for heartbeat messages
-    const String heartbeat_topic = "debug/heartbeat";
+    const char* heartbeat_topic = "debug/heartbeat";
 
     void mqttCommandReceived(char* topic, uint8_t* message, unsigned int length);
 

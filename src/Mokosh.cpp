@@ -187,7 +187,7 @@ void Mokosh::hello() {
     this->publishIP();
 
     this->onInterval([&]() {
-        publish(_instance->heartbeat_topic.c_str(), millis());
+        publish(_instance->heartbeat_topic, millis());
     },
                      HEARTBEAT, "MOKOSH_HEARTBEAT");
 }
@@ -246,7 +246,6 @@ void Mokosh::begin(String prefix, bool autoconnect) {
         }
     } else {
         mdebugI("Auto network connection was disabled!");
-        mdebugI("Clients are not constructed, heartbeat is not defined, OTA is unavailable.");
     }
 
     mdebugI("Starting operations...");
@@ -261,7 +260,7 @@ void Mokosh::publishIP() {
         snprintf(msg, sizeof(msg) - 1, "{\"ipaddress\": \"%s\"}", ipbuf);
 
         mdebugV("Sending IP");
-        this->publish(debug_ip_topic.c_str(), msg);
+        this->publish(debug_ip_topic, msg);
     }
 }
 
@@ -298,7 +297,7 @@ bool Mokosh::reconnect() {
             mdebugI("MQTT reconnected");
 
             char cmd_topic[32];
-            sprintf(cmd_topic, "%s_%s/%s", this->prefix.c_str(), this->hostNameC, this->cmd_topic.c_str());
+            sprintf(cmd_topic, "%s_%s/%s", this->prefix.c_str(), this->hostNameC, this->cmd_topic);
 
             this->mqtt->subscribe(cmd_topic);
             this->mqtt->setCallback(_mqtt_callback);
@@ -437,10 +436,10 @@ void Mokosh::publishShortVersion() {
 
     if (sep != -1) {
         String ver = this->version.substring(0, sep);
-        this->publish(version_topic.c_str(), ver);
+        this->publish(version_topic, ver);
         mdebugV("Version: %s", ver.c_str());
     } else {
-        this->publish(version_topic.c_str(), this->version);
+        this->publish(version_topic, this->version);
         mdebugV("Version: %s", this->version.c_str());
     }
 }
@@ -477,7 +476,7 @@ void Mokosh::mqttCommandReceived(char* topic, uint8_t* message, unsigned int len
     }
 
     if (strcmp(msg, "getfullver") == 0) {
-        this->publish(debug_response_topic.c_str(), this->version);
+        this->publish(debug_response_topic, this->version);
 
         return;
     }
@@ -485,13 +484,13 @@ void Mokosh::mqttCommandReceived(char* topic, uint8_t* message, unsigned int len
     if (strcmp(msg, "gmd5") == 0) {
         char md5[128];
         ESP.getSketchMD5().toCharArray(md5, 128);
-        this->publish(debug_response_topic.c_str(), md5);
+        this->publish(debug_response_topic, md5);
 
         return;
     }
 
     if (strcmp(msg, "getbuilddate") == 0) {
-        this->publish(debug_response_topic.c_str(), this->buildDate);
+        this->publish(debug_response_topic, this->buildDate);
 
         return;
     }
@@ -532,7 +531,7 @@ void Mokosh::mqttCommandReceived(char* topic, uint8_t* message, unsigned int len
             String field = msg2.substring(12);
             String value = this->config.getString(field.c_str());
 
-            this->publish(debug_response_topic.c_str(), value);
+            this->publish(debug_response_topic, value);
             return;
         }
 
@@ -540,7 +539,7 @@ void Mokosh::mqttCommandReceived(char* topic, uint8_t* message, unsigned int len
             String field = msg2.substring(12);
             int value = this->config.getInt(field.c_str());
 
-            this->publish(debug_response_topic.c_str(), value);
+            this->publish(debug_response_topic, value);
             return;
         }
 
@@ -548,7 +547,7 @@ void Mokosh::mqttCommandReceived(char* topic, uint8_t* message, unsigned int len
             String field = msg2.substring(12);
             float value = this->config.getFloat(field.c_str());
 
-            this->publish(debug_response_topic.c_str(), value);
+            this->publish(debug_response_topic, value);
             return;
         }
 
@@ -605,8 +604,6 @@ void Mokosh::mqttCommandReceived(char* topic, uint8_t* message, unsigned int len
 }
 
 void Mokosh::onInterval(THandlerFunction func, unsigned long time, String name) {
-    mdebugV("Registering interval function %s on time %ld", name.c_str(), time);
-
     IntervalEvent* first = NULL;
     for (uint8_t i = 0; i < EVENTS_COUNT; i++) {
         if (events[i].name == name) {
@@ -616,12 +613,15 @@ void Mokosh::onInterval(THandlerFunction func, unsigned long time, String name) 
     }
 
     if (first == NULL) {
+        mdebugV("Registering interval function %s on time %ld", name.c_str(), time);
         for (uint8_t i = 0; i < EVENTS_COUNT; i++) {
             if (events[i].interval == 0) {
                 first = &events[i];
                 break;
             }
         }
+    } else {
+        mdebugV("Overriding interval function %s on time %ld", name.c_str(), time);
     }
 
     if (first == NULL) {
@@ -693,7 +693,7 @@ void Mokosh::error(int code) {
             mdebugE("Unhandled error, code: %d, going loop.", code);
             if (this->debugReady) {
                 if (this->client->connected() && this->mqtt->state() == MQTT_CONNECTED) {
-                    this->publish(this->heartbeat_topic.c_str(), "error_loop", true);
+                    this->publish(this->heartbeat_topic, "error_loop", true);
                 }
             } else {
                 Serial.print("Going loop.");
