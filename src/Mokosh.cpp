@@ -39,25 +39,28 @@ void Mokosh::debug(DebugLevel level, const char* func, const char* fmt, ...) {
     va_end(argptr);
 
     if (!_instance->isDebugReady()) {
+        char lvl;
         switch (level) {
             case DebugLevel::DEBUG:
-                Serial.printf("(D) (%s) %s [local debug]\n", func, dest);
+                lvl = 'D';
                 break;
             case DebugLevel::ERROR:
-                Serial.printf("(E) (%s) %s [local debug]\n", func, dest);
+                lvl = 'E';
                 break;
             case DebugLevel::INFO:
-                Serial.printf("(I) (%s) %s [local debug]\n", func, dest);
+                lvl = 'I';
                 break;
             case DebugLevel::WARNING:
-                Serial.printf("(W) (%s) %s [local debug]\n", func, dest);
+                lvl = 'W';
                 break;
             case DebugLevel::VERBOSE:
-                Serial.printf("(V) (%s) %s [local debug]\n", func, dest);
+                lvl = 'V';
                 break;
             default:
-                Serial.printf("(%s) %s [local debug]\n", func, dest);
+                lvl = 'A';
         }
+
+        Serial.printf("L (%c t:%ldms) (%s) %s\n", lvl, millis(), func, dest);
     }
 
     if (Debug.isActive((uint8_t)level)) {
