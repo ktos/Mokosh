@@ -3,9 +3,9 @@
 #if defined(ESP8266)
 #include <ESP8266WiFi.h>
 #endif
+#include <ArduinoOTA.h>
 #include <PubSubClient.h>
 #include <RemoteDebug.h>
-#include <ArduinoOTA.h>
 
 #include "MokoshConfig.hpp"
 #include "MokoshOTAConfig.hpp"
@@ -99,7 +99,7 @@ class Mokosh {
     static void debug(DebugLevel level, const char* func, const char* fmt, ...);
 
     // enables ArduinoOTA subsystem
-    // must be called before begin()    
+    // must be called before begin()
     void enableOTA();
 
     // disables LittleFS and config.json support
@@ -205,11 +205,18 @@ class Mokosh {
     // available
     void setIgnoreConnectionErrors(bool value);
 
-    static bool isDebugReady();    
+    // sets if the Wi-Fi should be reconnected on MQTT reconnect if needed
+    void setForceWiFiReconnect(bool value);
+
+    // returns if the RemoteDebug is ready
+    static bool isDebugReady();
+
+    // returns if Wi-Fi is connected at all
+    bool isWifiConnected();
 
    private:
     f_error_handler_t errorHandler;
-    f_command_handler_t commandHandler;    
+    f_command_handler_t commandHandler;
 
     static bool debugReady;
     String hostName;
@@ -230,6 +237,7 @@ class Mokosh {
     bool isOTAEnabled = false;
     bool isOTAInProgress = false;
     bool isIgnoringConnectionErrors = false;
+    bool isForceWifiReconnect = false;
 
     DebugLevel debugLevel = DebugLevel::WARNING;
 
@@ -239,7 +247,7 @@ class Mokosh {
     bool reconnect();
 
     void publishShortVersion();
-    void publishIP();    
+    void publishIP();
 
-    char ssid[16] = {0};    
+    char ssid[16] = {0};
 };

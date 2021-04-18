@@ -195,7 +195,7 @@ void Mokosh::begin(String prefix) {
     mdebugI("Sending hello");
     this->publishShortVersion();
 
-    mdebugD("Sending IP");
+    mdebugV("Sending IP");
     this->publishIP();
 
     this->onInterval(_heartbeat, HEARTBEAT);
@@ -217,15 +217,23 @@ void Mokosh::disableFS() {
 }
 
 bool Mokosh::reconnect() {
-    if (client->connected())
+    if (this->mqtt->connected())
         return true;
+    
+    if (!this->isWifiConnected() && this->isForceWifiReconnect) {
+        mdebugV("Wi-Fi is not connected at all, forcing reconnect.");
+        bool result = this->connectWifi();
+        if (!result) {
+            if (this->isIgnoringConnectionErrors) {
+                mdebugE("Failed to reconnect to Wi-Fi");
+            } else {
+                this->error(Mokosh::Error_WIFI);
+            }
+        }
+    }
+
 
     uint8_t trials = 0;
-
-    if (!client->connected() && this->isIgnoringConnectionErrors) {
-        mdebugV("Client not connected, but ignoring.");
-        return false;
-    }
 
     while (!client->connected()) {
         trials++;
@@ -240,6 +248,11 @@ bool Mokosh::reconnect() {
 
             return true;
         } else {
+            if (this->isIgnoringConnectionErrors) {
+                mdebugV("Client not connected, but ignoring.");
+                return false;
+            }
+
             mdebugE("MQTT failed: %d", mqtt->state());
 
             // if not connected in the third trial, give up
@@ -262,6 +275,14 @@ bool Mokosh::isConfigurationSet() {
     return strcmp(this->config.ssid, "") != 0;
 }
 
+bool Mokosh::isWifiConnected() {
+    return WiFi.status() == WL_CONNECTED;
+}
+
+void Mokosh::setForceWiFiReconnect(bool value) {
+    this->isForceWifiReconnect = value;
+}
+
 bool Mokosh::connectWifi() {
     WiFi.enableAP(0);
     char fullHostName[32] = {0};
@@ -280,9 +301,16 @@ bool Mokosh::connectWifi() {
         Serial.print(".");
         delay(250);
     }
+    
+    bool status = WiFi.status() == WL_CONNECTED;
 
-    // Check connection
-    return (WiFi.status() == WL_CONNECTED);
+    if (status == true) {
+        Serial.println(" ok");
+    } else {
+        Serial.println(" fail");
+    }
+
+    return status;
 }
 
 Mokosh* Mokosh::getInstance() {
@@ -408,8 +436,10 @@ void Mokosh::publishShortVersion() {
     if (sep != -1) {
         String ver = this->version.substring(0, sep);
         this->publish(version_topic.c_str(), ver);
+        mdebugV("Version: %s", ver.c_str());
     } else {
         this->publish(version_topic.c_str(), this->version);
+        mdebugV("Version: %s", this->version.c_str());
     }
 }
 
