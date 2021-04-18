@@ -7,8 +7,7 @@
 #include <PubSubClient.h>
 #include <RemoteDebug.h>
 
-#include "MokoshConfig.hpp"
-#include "MokoshOTAConfig.hpp"
+#include "MokoshOTAHandlers.hpp"
 
 // handler for errors, used in onError
 using f_error_handler_t = void (*)(int);
@@ -165,6 +164,7 @@ class Mokosh {
     const String broker_field = "broker";
     const String broker_port_field = "brokerPort";
     const String ota_port_field = "otaPort";
+    const String ota_password_field = "otaPasswordHash";
     const String ssid_field = "ssid";
     const String wifi_password_field = "password";
 
@@ -194,8 +194,8 @@ class Mokosh {
 
     void mqttCommandReceived(char* topic, uint8_t* message, unsigned int length);
 
-    // property with all possible OTA parameters
-    MokoshOTAConfiguration OTA;
+    // property with all possible OTA handlers
+    MokoshOTAHandlers OtaHandlers;
 
     // sets ignoring connection errors - useful in example of deep sleep
     // so the device is going to sleep again if wifi networks/mqtt are not

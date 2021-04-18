@@ -157,8 +157,12 @@ void Mokosh::begin(String prefix) {
         mdebugV("OTA is enabled. OTA port: %d", otaPort);
         ArduinoOTA.setPort(otaPort);
         ArduinoOTA.setHostname(this->hostNameC);
+        
+        String hash = this->readConfigString(Mokosh::ota_password_field.c_str());
+        if (hash != "")        
+            ArduinoOTA.setPasswordHash(hash.c_str());
 
-        MokoshOTAConfiguration moc = this->OTA;
+        MokoshOTAHandlers moc = this->OtaHandlers;
 
         ArduinoOTA
             .onStart([moc]() {
