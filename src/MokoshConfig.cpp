@@ -2,7 +2,7 @@
 #include "Mokosh.hpp"
 
 bool MokoshConfig::isConfigurationSet() {
-    return this->readConfigString("ssid") != "";
+    return this->getString("ssid") != "";
 }
 
 bool MokoshConfig::configFileExists() {
@@ -15,7 +15,7 @@ bool MokoshConfig::configFileExists() {
     }
 }
 
-String MokoshConfig::readConfigString(const char* field, String def) {
+String MokoshConfig::getString(const char* field, String def) {
     if (!this->config.containsKey(field)) {
         mdebugW("config.json field %s does not exist!", field);
         return def;
@@ -25,7 +25,7 @@ String MokoshConfig::readConfigString(const char* field, String def) {
     return String(data);
 }
 
-int MokoshConfig::readConfigInt(const char* field, int def) {
+int MokoshConfig::getInt(const char* field, int def) {
     if (!this->config.containsKey(field)) {
         mdebugW("config.json field %s does not exist!", field);
         return def;
@@ -35,7 +35,7 @@ int MokoshConfig::readConfigInt(const char* field, int def) {
     return data;
 }
 
-float MokoshConfig::readConfigFloat(const char* field, float def) {
+float MokoshConfig::getFloat(const char* field, float def) {
     if (!this->config.containsKey(field)) {
         mdebugW("config.json field %s does not exist!", field);
         return def;
@@ -45,25 +45,29 @@ float MokoshConfig::readConfigFloat(const char* field, float def) {
     return data;
 }
 
-void MokoshConfig::setConfig(const char* field, String value) {
+void MokoshConfig::set(const char* field, String value) {
     this->config[field] = value;
 }
 
-void MokoshConfig::setConfig(const char* field, int value) {
+void MokoshConfig::set(const char* field, const char* value) {
     this->config[field] = value;
 }
 
-void MokoshConfig::setConfig(const char* field, float value) {
+void MokoshConfig::set(const char* field, int value) {
     this->config[field] = value;
 }
 
-void MokoshConfig::saveConfig() {
+void MokoshConfig::set(const char* field, float value) {
+    this->config[field] = value;
+}
+
+void MokoshConfig::save() {
     mdebugV("Saving config.json");
     File configFile = LittleFS.open("/config.json", "w");
     serializeJson(this->config, configFile);
 }
 
-bool MokoshConfig::reloadConfig() {
+bool MokoshConfig::reload() {
     mdebugV("Reloading config.json");
     File configFile = LittleFS.open("/config.json", "r");
 
@@ -83,11 +87,11 @@ bool MokoshConfig::reloadConfig() {
     return true;
 }
 
-bool MokoshConfig::hasConfigKey(const char* field) {
+bool MokoshConfig::hasKey(const char* field) {
     return this->config.containsKey(field);
 }
 
-void MokoshConfig::removeConfigFile() {
+void MokoshConfig::removeFile() {
     mdebugV("Removing config.json");
     LittleFS.remove("/config.json");
 }

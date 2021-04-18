@@ -10,10 +10,10 @@ void setup() {
     // mqtt broker at 192.168.1.10, port 1883
 
     mokosh.disableLoadingConfigFile();
-    mokosh.setConfig(Mokosh::config_ssid, "yourssid");
-    mokosh.setConfig(Mokosh::config_wifi_password, "yourpassword");
-    mokosh.setConfig(Mokosh::config_broker, "192.168.1.10");
-    mokosh.setConfig(Mokosh::config_broker_port, 1883);
+    mokosh.config.set(mokosh.config.key_ssid, "yourssid");
+    mokosh.config.set(mokosh.config.key_wifi_password, "yourpassword");
+    mokosh.config.set(mokosh.config.key_broker, "192.168.1.10");
+    mokosh.config.set(mokosh.config.key_broker_port, 1883);
 
     // device id will be Mokosh_ABCDE where ABCDE is a chip id
     mokosh.begin("Mokosh");

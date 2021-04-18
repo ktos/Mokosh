@@ -7,43 +7,46 @@
 
 class MokoshConfig {
    public:
-    const String config_broker = "broker";
-    const String config_broker_port = "brokerPort";
-    const String config_ota_port = "otaPort";
-    const String config_ota_password = "otaPasswordHash";
-    const String config_ssid = "ssid";
-    const String config_wifi_password = "password";
-    const String config_client_id = "mqttClientId";
+    const char* key_broker = "broker";
+    const char* key_broker_port = "brokerPort";
+    const char* key_ota_port = "otaPort";
+    const char* key_ota_password = "otaPasswordHash";
+    const char* key_ssid = "ssid";
+    const char* key_wifi_password = "password";
+    const char* key_client_id = "mqttClientId";
 
     // reads a given string field from config.json
-    String readConfigString(const char* field, String def = "");
+    String getString(const char* field, String def = "");
 
     // reads a given int field from config.json
-    int readConfigInt(const char* field, int def = 0);
+    int getInt(const char* field, int def = 0);
 
     // reads a given float field from config.json
-    float readConfigFloat(const char* field, float def = 0);
+    float getFloat(const char* field, float def = 0);
 
     // sets a configuration field to a given value
-    void setConfig(const char* field, String value);
+    void set(const char* field, String value);
 
     // sets a configuration field to a given value
-    void setConfig(const char* field, int value);
+    void set(const char* field, const char* value);
 
     // sets a configuration field to a given value
-    void setConfig(const char* field, float value);
+    void set(const char* field, int value);
+
+    // sets a configuration field to a given value
+    void set(const char* field, float value);
 
     // saves configuration to a config.json file
-    void saveConfig();
+    void save();
 
     // reads configuration from a config.json file
-    bool reloadConfig();
+    bool reload();
 
     // checks if the key exists in configuration
-    bool hasConfigKey(const char* field);
+    bool hasKey(const char* field);
 
     // removes configuration file
-    void removeConfigFile();
+    void removeFile();
 
     // prepares file system
     bool prepareFS();

@@ -60,14 +60,14 @@ bool Mokosh::isDebugReady() {
 
 bool Mokosh::configureMqttClient() {
     IPAddress broker;
-    String brokerAddress = this->config.readConfigString(this->config.config_broker.c_str());
+    String brokerAddress = this->config.getString(this->config.key_broker);
     if (brokerAddress == "") {
         mdebugE("MQTT configuration is not provided!");
         return false;
     }
 
     broker.fromString(brokerAddress);
-    uint16_t brokerPort = this->config.readConfigInt(this->config.config_broker_port.c_str(), 1883);
+    uint16_t brokerPort = this->config.getInt(this->config.key_broker_port, 1883);
 
     this->mqtt->setServer(broker, brokerPort);
     mdebugD("MQTT broker set to %s port %d", broker.toString().c_str(), brokerPort);
@@ -109,18 +109,18 @@ void Mokosh::setupMqttClient() {
 void Mokosh::setupOta() {
     uint16_t otaPort = 3232;
 #if defined(ESP8266)
-    otaPort = this->config.readConfigInt(this->config.config_ota_port.c_str(), 8266);
+    otaPort = this->config.getInt(this->config.key_ota_port, 8266);
 #endif
 
 #if defined(ESP32)
-    otaPort = this->config.readConfigInt(this->config.config_ota_port.c_str(), 3232);
+    otaPort = this->config.getInt(this->config.key_ota_port, 3232);
 #endif
 
     mdebugV("OTA is enabled. OTA port: %d", otaPort);
     ArduinoOTA.setPort(otaPort);
     ArduinoOTA.setHostname(this->hostNameC);
 
-    String hash = this->config.readConfigString(this->config.config_ota_password.c_str());
+    String hash = this->config.getString(this->config.key_ota_password);
     if (hash != "")
         ArduinoOTA.setPasswordHash(hash.c_str());
 
@@ -224,7 +224,7 @@ void Mokosh::begin(String prefix, bool autoconnect) {
             this->error(MokoshErrors::FileSystemNotAvailable);
         }
 
-        this->config.reloadConfig();
+        this->config.reload();
     }
 
     if (!this->config.isConfigurationSet()) {
@@ -293,8 +293,8 @@ bool Mokosh::reconnect() {
         trials++;
 
         String clientId = this->hostName;
-        if (this->config.hasConfigKey(this->config.config_client_id.c_str()))
-            clientId = this->config.readConfigString(this->config.config_client_id.c_str(), this->hostName);
+        if (this->config.hasKey(this->config.key_client_id))
+            clientId = this->config.getString(this->config.key_client_id, this->hostName);
 
         if (this->mqtt->connect(clientId.c_str())) {
             mdebugI("MQTT reconnected");
@@ -352,8 +352,8 @@ wl_status_t Mokosh::connectWifi() {
     WiFi.setHostname(fullHostName);
 #endif
 
-    String ssid = this->config.readConfigString(this->config.config_ssid.c_str(), "");
-    String password = this->config.readConfigString(this->config.config_wifi_password.c_str());
+    String ssid = this->config.getString(this->config.key_ssid, "");
+    String password = this->config.getString(this->config.key_wifi_password);
 
     if (ssid == "") {
         mdebugE("Configured ssid is empty, cannot connect to Wi-Fi");
@@ -430,7 +430,7 @@ void Mokosh::loop() {
 }
 
 void Mokosh::factoryReset() {
-    this->config.removeConfigFile();
+    this->config.removeFile();
     ESP.restart();
 }
 
@@ -511,7 +511,7 @@ void Mokosh::mqttCommandReceived(char* topic, uint8_t* message, unsigned int len
     }
 
     if (strcmp(msg, "reloadconfig") == 0) {
-        this->config.reloadConfig();
+        this->config.reload();
 
         return;
     }
@@ -526,13 +526,13 @@ void Mokosh::mqttCommandReceived(char* topic, uint8_t* message, unsigned int len
         }
 
         if (msg2 == "saveconfig") {
-            this->config.saveConfig();
+            this->config.save();
             return;
         }
 
         if (msg2.startsWith("showconfigs=")) {
             String field = msg2.substring(12);
-            String value = this->config.readConfigString(field.c_str());
+            String value = this->config.getString(field.c_str());
 
             this->publish(debug_response_topic.c_str(), value);
             return;
@@ -540,7 +540,7 @@ void Mokosh::mqttCommandReceived(char* topic, uint8_t* message, unsigned int len
 
         if (msg2.startsWith("showconfigi=")) {
             String field = msg2.substring(12);
-            int value = this->config.readConfigInt(field.c_str());
+            int value = this->config.getInt(field.c_str());
 
             this->publish(debug_response_topic.c_str(), value);
             return;
@@ -548,7 +548,7 @@ void Mokosh::mqttCommandReceived(char* topic, uint8_t* message, unsigned int len
 
         if (msg2.startsWith("showconfigf=")) {
             String field = msg2.substring(12);
-            float value = this->config.readConfigFloat(field.c_str());
+            float value = this->config.getFloat(field.c_str());
 
             this->publish(debug_response_topic.c_str(), value);
             return;
@@ -562,7 +562,7 @@ void Mokosh::mqttCommandReceived(char* topic, uint8_t* message, unsigned int len
 
             mdebugV("Setting configuration: field: %s, new value: %s", field.c_str(), value.c_str());
 
-            this->config.setConfig(field.c_str(), value);
+            this->config.set(field.c_str(), value);
 
             return;
         }
@@ -575,7 +575,7 @@ void Mokosh::mqttCommandReceived(char* topic, uint8_t* message, unsigned int len
 
             mdebugV("Setting configuration: field: %s, new value: %d", field.c_str(), value.toInt());
 
-            this->config.setConfig(field.c_str(), (int)(value.toInt()));
+            this->config.set(field.c_str(), (int)(value.toInt()));
 
             return;
         }
@@ -588,7 +588,7 @@ void Mokosh::mqttCommandReceived(char* topic, uint8_t* message, unsigned int len
 
             mdebugV("Setting configuration: field: %s, new value: %f", field.c_str(), value.toFloat());
 
-            this->config.setConfig(field.c_str(), value.toFloat());
+            this->config.set(field.c_str(), value.toFloat());
 
             return;
         }

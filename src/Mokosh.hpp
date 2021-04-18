@@ -215,6 +215,8 @@ class Mokosh {
     // this, autoconnect should be disabled
     void setupCustomClient(Client& client);
 
+    // a configuration object to set and read configs
+    MokoshConfig config;
    private:
     bool debugReady;
     String hostName;
@@ -222,9 +224,7 @@ class Mokosh {
     String prefix;
     IntervalEvent events[EVENTS_COUNT];
     String version = "1.0.0";
-    String buildDate = "1970-01-01";
-
-    MokoshConfig config;
+    String buildDate = "1970-01-01";    
 
     Client* client;
     PubSubClient* mqtt;
