@@ -18,7 +18,7 @@ void on_error(int code) {
 void setup() {
     pinMode(LED_BUILTIN, OUTPUT);
     // custom error handler
-    m.onError(on_error);
+    m.onError = on_error;
 
     m.setDebugLevel(DebugLevel::VERBOSE);
 

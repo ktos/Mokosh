@@ -70,14 +70,14 @@ bool Mokosh::isDebugReady() {
 
 bool Mokosh::configureMqttClient() {
     IPAddress broker;
-    String brokerAddress = this->readConfigString(Mokosh::broker_field.c_str());
+    String brokerAddress = this->readConfigString(Mokosh::config_broker.c_str());
     if (brokerAddress == "") {
         mdebugE("MQTT configuration is not provided!");
         return false;
     }
 
     broker.fromString(brokerAddress);
-    uint16_t brokerPort = this->readConfigInt(Mokosh::broker_port_field.c_str(), 1883);
+    uint16_t brokerPort = this->readConfigInt(Mokosh::config_broker_port.c_str(), 1883);
 
     this->mqtt->setServer(broker, brokerPort);
     mdebugD("MQTT broker set to %s port %d", broker.toString().c_str(), brokerPort);
@@ -151,12 +151,20 @@ void Mokosh::begin(String prefix) {
     }
 
     if (this->client->connected() && this->isOTAEnabled) {
-        uint16_t otaPort = this->readConfigInt(Mokosh::ota_port_field.c_str(), 3232);
+        uint16_t otaPort = 3232;
+        #if defined(ESP8266)
+        otaPort = this->readConfigInt(Mokosh::config_ota_port.c_str(), 8266);
+        #endif
+
+        #if defined(ESP32)
+        otaPort = this->readConfigInt(Mokosh::config_ota_port.c_str(), 3232);
+        #endif
+
         mdebugV("OTA is enabled. OTA port: %d", otaPort);
         ArduinoOTA.setPort(otaPort);
         ArduinoOTA.setHostname(this->hostNameC);
 
-        String hash = this->readConfigString(Mokosh::ota_password_field.c_str());
+        String hash = this->readConfigString(Mokosh::config_ota_password.c_str());
         if (hash != "")
             ArduinoOTA.setPasswordHash(hash.c_str());
 
@@ -235,7 +243,7 @@ void Mokosh::publishIP() {
     this->publish(debug_ip_topic.c_str(), msg);
 }
 
-void Mokosh::disableFS() {
+void Mokosh::disableLoadingConfigFile() {
     this->isFSEnabled = false;
 }
 
@@ -319,8 +327,8 @@ bool Mokosh::connectWifi() {
     WiFi.setHostname(fullHostName);
 #endif
 
-    String ssid = readConfigString(ssid_field.c_str(), "");
-    String password = readConfigString(wifi_password_field.c_str());
+    String ssid = readConfigString(config_ssid.c_str(), "");
+    String password = readConfigString(config_wifi_password.c_str());
 
     if (ssid == "") {
         mdebugE("Configured ssid is empty, cannot connect to Wi-Fi");

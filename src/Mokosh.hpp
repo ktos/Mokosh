@@ -90,7 +90,7 @@ class Mokosh {
 
     // disables LittleFS and config.json support
     // must be called before begin()
-    void disableFS();
+    void disableLoadingConfigFile();
 
     // enables FirstRun subsystem if there is no config.json
     void enableFirstRun();
@@ -153,12 +153,12 @@ class Mokosh {
     // the name of subtopic used for heartbeat messages
     const String heartbeat_topic = "debug/heartbeat";
 
-    const String broker_field = "broker";
-    const String broker_port_field = "brokerPort";
-    const String ota_port_field = "otaPort";
-    const String ota_password_field = "otaPasswordHash";
-    const String ssid_field = "ssid";
-    const String wifi_password_field = "password";
+    const String config_broker = "broker";
+    const String config_broker_port = "brokerPort";
+    const String config_ota_port = "otaPort";
+    const String config_ota_password = "otaPasswordHash";
+    const String config_ssid = "ssid";
+    const String config_wifi_password = "password";
 
     // reads a given string field from config.json
     String readConfigString(const char* field, String def = "");

@@ -26,7 +26,7 @@ void setup() {
     // debug set to Verbose will display everything
     // available are: verbose, debug, info, warning, error
     mokosh.setDebugLevel(DebugLevel::VERBOSE);
-    mokosh.onCommand(customCommand);
+    mokosh.onCommand = customCommand;
 
     // no custom configuration is set, so it will try to load
     // from /config.json in LittleFS

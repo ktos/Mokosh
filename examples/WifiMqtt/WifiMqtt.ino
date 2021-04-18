@@ -8,8 +8,12 @@ void setup() {
 
     // static configuration to be used: Wifi with yourssid and yourpassword password
     // mqtt broker at 192.168.1.10, port 1883
-    MokoshConfiguration mc = Mokosh::CreateConfiguration("yourssid", "yourpassword", "192.168.1.10", 1883);
-    mokosh.setConfiguration(mc);
+
+    mokosh.disableLoadingConfigFile();
+    mokosh.setConfig(Mokosh::config_ssid, "yourssid");
+    mokosh.setConfig(Mokosh::config_wifi_password, "yourpassword");
+    mokosh.setConfig(Mokosh::config_broker, "192.168.1.10");
+    mokosh.setConfig(Mokosh::config_broker_port, 1883);
 
     // device id will be Mokosh_ABCDE where ABCDE is a chip id
     mokosh.begin("Mokosh");
