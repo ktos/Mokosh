@@ -383,8 +383,7 @@ String Mokosh::readConfigString(const char* field, String def) {
         return def;
     }
 
-    const char* data = this->config[field];
-    mdebugV("Read config.json string field %s, value %s", field, data);
+    const char* data = this->config[field];    
     return String(data);
 }
 
@@ -394,8 +393,7 @@ int Mokosh::readConfigInt(const char* field, int def) {
         return def;
     }
 
-    int data = this->config[field];
-    mdebugV("Read config.json int field %s, value %d", field, data);
+    int data = this->config[field];    
     return data;
 }
 
@@ -405,23 +403,19 @@ float Mokosh::readConfigFloat(const char* field, float def) {
         return def;
     }
 
-    float data = this->config[field];
-    mdebugV("Read config.json float field %s, value %f", field, data);
+    float data = this->config[field];    
     return data;
 }
 
-void Mokosh::setConfig(const char* field, String value) {
-    mdebugV("Settings config.json field %s to string %s", field, value.c_str());
+void Mokosh::setConfig(const char* field, String value) {    
     this->config[field] = value;
 }
 
-void Mokosh::setConfig(const char* field, int value) {
-    mdebugV("Settings config.json field %s to int %d", field, value);
+void Mokosh::setConfig(const char* field, int value) {    
     this->config[field] = value;
 }
 
-void Mokosh::setConfig(const char* field, float value) {
-    mdebugV("Settings config.json field %s to float %f", field, value);
+void Mokosh::setConfig(const char* field, float value) {    
     this->config[field] = value;
 }
 
