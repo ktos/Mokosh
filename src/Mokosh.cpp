@@ -77,7 +77,7 @@ bool Mokosh::configureMqttClient() {
     }
 
     broker.fromString(brokerAddress);
-    uint16_t brokerPort = this->readConfigInt(Mokosh::broker_port_field.c_str());
+    uint16_t brokerPort = this->readConfigInt(Mokosh::broker_port_field.c_str(), 1883);
 
     this->mqtt->setServer(broker, brokerPort);
     mdebugD("MQTT broker set to %s port %d", broker.toString().c_str(), brokerPort);
@@ -191,17 +191,19 @@ void Mokosh::begin(String prefix) {
         });
 
         ArduinoOTA.onError([moc](ota_error_t error) {
-            mdebugE("OTA failed with error %u", error);
+            String err;
             if (error == OTA_AUTH_ERROR)
-                mdebugE("Auth Failed");
+                err = "auth error";
             else if (error == OTA_BEGIN_ERROR)
-                mdebugE("Begin Failed");
+                err = "begin failed";
             else if (error == OTA_CONNECT_ERROR)
-                mdebugE("Connect Failed");
+                err = "connect failed";
             else if (error == OTA_RECEIVE_ERROR)
-                mdebugE("Receive Failed");
+                err = "receive failed";
             else if (error == OTA_END_ERROR)
-                mdebugE("End Failed");
+                err = "end failed";
+
+            mdebugE("OTA failed with error %u (%s)", error, err.c_str());
 
             if (moc.onError != nullptr)
                 moc.onError(error);
