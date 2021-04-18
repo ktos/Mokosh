@@ -21,6 +21,7 @@ void _heartbeat() {
 }
 
 RemoteDebug Debug;
+bool Mokosh::debugReady = false;
 
 MokoshConfiguration Mokosh::CreateConfiguration(const char* ssid, const char* password, const char* broker, uint16_t brokerPort) {
     MokoshConfiguration mc;
@@ -45,13 +46,17 @@ Mokosh::Mokosh() {
 }
 
 void Mokosh::debug(DebugLevel level, const char* func, const char* fmt, ...) {
-    if (Debug.isActive((uint8_t)level)) {
-        char dest[256];
-        va_list argptr;
-        va_start(argptr, fmt);
-        vsprintf(dest, fmt, argptr);
-        va_end(argptr);
+    char dest[256];
+    va_list argptr;
+    va_start(argptr, fmt);
+    vsprintf(dest, fmt, argptr);
+    va_end(argptr);
 
+    if (!Mokosh::isDebugReady()) {
+        Serial.printf("(%s) %s [local debug]\n", func, dest);
+    }
+
+    if (Debug.isActive((uint8_t)level)) {
         Debug.printf("(%s) %s\n", func, dest);
     }
 }
@@ -271,7 +276,7 @@ bool Mokosh::connectWifi() {
     while (WiFi.status() != WL_CONNECTED && millis() - startTime < 10000) {
         Serial.print(".");
         delay(250);
-    }    
+    }
 
     // Check connection
     return (WiFi.status() == WL_CONNECTED);

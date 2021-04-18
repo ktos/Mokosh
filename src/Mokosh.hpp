@@ -205,13 +205,13 @@ class Mokosh {
     // available
     void setIgnoreConnectionErrors(bool value);
 
-    static bool isDebugReady();
+    static bool isDebugReady();    
 
    private:
     f_error_handler_t errorHandler;
-    f_command_handler_t commandHandler;
-    bool debugReady;
+    f_command_handler_t commandHandler;    
 
+    static bool debugReady;
     String hostName;
     char hostNameC[32];
     String prefix;
