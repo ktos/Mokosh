@@ -351,19 +351,34 @@ void Mokosh::loop() {
     ArduinoOTA.handle();
 }
 
-String Mokosh::readConfigString(const char* field) {
+String Mokosh::readConfigString(const char* field, String def) {
+    if (!this->configJson.containsKey(field)) {
+        mdebugW("config.json field %s does not exist!", field);
+        return def;
+    }
+    
     const char* data = this->configJson[field];
     mdebugV("Read config.json string field %s, value %s", field, data);
     return String(data);
 }
 
-int Mokosh::readConfigInt(const char* field) {
+int Mokosh::readConfigInt(const char* field, int def) {
+    if (!this->configJson.containsKey(field)) {
+        mdebugW("config.json field %s does not exist!", field);
+        return def;
+    }
+    
     int data = this->configJson[field];
     mdebugV("Read config.json int field %s, value %d", field, data);
     return data;
 }
 
-float Mokosh::readConfigFloat(const char* field) {
+float Mokosh::readConfigFloat(const char* field, float def) {
+    if (!this->configJson.containsKey(field)) {
+        mdebugW("config.json field %s does not exist!", field);
+        return def;
+    }
+
     float data = this->configJson[field];
     mdebugV("Read config.json float field %s, value %f", field, data);
     return data;

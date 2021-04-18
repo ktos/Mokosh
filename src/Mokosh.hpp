@@ -172,13 +172,13 @@ class Mokosh {
     static MokoshConfiguration CreateConfiguration(const char* ssid, const char* password, const char* broker, uint16_t brokerPort);
 
     // reads a given string field from config.json
-    String readConfigString(const char* field);
+    String readConfigString(const char* field, String def = "");
 
     // reads a given int field from config.json
-    int readConfigInt(const char* field);
+    int readConfigInt(const char* field, int def = 0);
 
     // reads a given float field from config.json
-    float readConfigFloat(const char* field);
+    float readConfigFloat(const char* field, float def = 0);
 
     // sets a configuration field to a given value
     void setConfig(const char* field, String value);
