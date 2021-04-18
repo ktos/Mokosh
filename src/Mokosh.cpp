@@ -84,7 +84,116 @@ bool Mokosh::configureMqttClient() {
     return true;
 }
 
-void Mokosh::begin(String prefix) {
+void Mokosh::setupRemoteDebug() {
+    Debug.begin(this->hostName, (uint8_t)this->debugLevel);
+    Debug.setSerialEnabled(true);
+    Debug.setResetCmdEnabled(true);
+    Debug.showTime(true);
+
+    this->debugReady = true;
+}
+
+void Mokosh::setupWiFiClient() {
+    mdebugI("IP: %s", WiFi.localIP().toString().c_str());
+
+    this->client = new WiFiClient();
+}
+
+void Mokosh::setupMqttClient() {
+    this->mqtt = new PubSubClient(*(this->client));
+
+    if (this->configureMqttClient()) {
+        if (!this->reconnect()) {
+            if (!this->isIgnoringConnectionErrors)
+                this->error(Mokosh::Error_MQTT);
+        }
+    }
+}
+
+void Mokosh::setupOta() {
+    uint16_t otaPort = 3232;
+#if defined(ESP8266)
+    otaPort = this->readConfigInt(Mokosh::config_ota_port.c_str(), 8266);
+#endif
+
+#if defined(ESP32)
+    otaPort = this->readConfigInt(Mokosh::config_ota_port.c_str(), 3232);
+#endif
+
+    mdebugV("OTA is enabled. OTA port: %d", otaPort);
+    ArduinoOTA.setPort(otaPort);
+    ArduinoOTA.setHostname(this->hostNameC);
+
+    String hash = this->readConfigString(Mokosh::config_ota_password.c_str());
+    if (hash != "")
+        ArduinoOTA.setPasswordHash(hash.c_str());
+
+    MokoshOTAHandlers moc = this->OtaHandlers;
+
+    ArduinoOTA
+        .onStart([moc]() {
+            String type;
+            if (ArduinoOTA.getCommand() == U_FLASH) {
+                type = "sketch";
+            } else {
+                // U_SPIFFS
+                type = "filesystem";
+                LittleFS.end();
+            }
+            mdebugI("OTA started. Updating %s", type.c_str());
+            if (moc.onStart != nullptr)
+                moc.onStart();
+        });
+
+    ArduinoOTA.onEnd([moc]() {
+        mdebugI("OTA finished.");
+        LittleFS.begin();
+        if (moc.onEnd != nullptr)
+            moc.onEnd();
+    });
+
+    ArduinoOTA.onProgress([moc](unsigned int progress, unsigned int total) {
+        mdebugV("OTA progress: %u%%\n", (progress / (total / 100)));
+        if (moc.onProgress != nullptr)
+            moc.onProgress(progress, total);
+    });
+
+    ArduinoOTA.onError([moc](ota_error_t error) {
+        String err;
+        if (error == OTA_AUTH_ERROR)
+            err = "auth error";
+        else if (error == OTA_BEGIN_ERROR)
+            err = "begin failed";
+        else if (error == OTA_CONNECT_ERROR)
+            err = "connect failed";
+        else if (error == OTA_RECEIVE_ERROR)
+            err = "receive failed";
+        else if (error == OTA_END_ERROR)
+            err = "end failed";
+
+        mdebugE("OTA failed with error %u (%s)", error, err.c_str());
+
+        if (moc.onError != nullptr)
+            moc.onError(error);
+    });
+
+    ArduinoOTA.begin();
+}
+
+void Mokosh::hello() {
+    mdebugI("Sending hello");
+    this->publishShortVersion();
+
+    mdebugV("Sending IP");
+    this->publishIP();
+
+    this->onInterval([&]() {
+        publish(_instance->heartbeat_topic.c_str(), millis());
+    },
+                     HEARTBEAT, "HEARTBEAT");
+}
+
+void Mokosh::begin(String prefix, bool autoconnect) {
     Serial.begin(115200);
     Serial.println();
     Serial.println();
@@ -123,113 +232,29 @@ void Mokosh::begin(String prefix) {
         this->error(Mokosh::Error_CONFIG);
     }
 
-    if (this->connectWifi()) {
-        Debug.begin(this->hostName, (uint8_t)this->debugLevel);
-        Debug.setSerialEnabled(true);
-        Debug.setResetCmdEnabled(true);
-        Debug.showTime(true);
+    if (autoconnect) {
+        this->connectWifi();
+        if (this->lastWifiStatus == WL_CONNECTED) {
+            this->setupRemoteDebug();
+            this->setupWiFiClient();
+            this->setupMqttClient();
 
-        this->debugReady = true;
+            if (this->isOTAEnabled) {
+                this->setupOta();
+            }
 
-        mdebugI("IP: %s", WiFi.localIP().toString().c_str());
-    } else {
-        if (!this->isIgnoringConnectionErrors) {
-            this->error(Mokosh::Error_WIFI);
+            this->hello();
         } else {
-            mdebugD("Wi-Fi connection error, ignored.");
+            if (!this->isIgnoringConnectionErrors) {
+                this->error(Mokosh::Error_WIFI);
+            } else {
+                mdebugD("Wi-Fi connection error, ignored.");
+            }
         }
+    } else {
+        mdebugI("Auto network connection was disabled!");
+        mdebugI("Clients are not constructed, heartbeat is not defined, OTA is unavailable.");
     }
-
-    this->client = new WiFiClient();
-    this->mqtt = new PubSubClient(*(this->client));
-
-    if (this->configureMqttClient()) {
-        if (!this->reconnect()) {
-            if (!this->isIgnoringConnectionErrors)
-                this->error(Mokosh::Error_MQTT);
-        }
-    }
-
-    if (this->client->connected() && this->isOTAEnabled) {
-        uint16_t otaPort = 3232;
-        #if defined(ESP8266)
-        otaPort = this->readConfigInt(Mokosh::config_ota_port.c_str(), 8266);
-        #endif
-
-        #if defined(ESP32)
-        otaPort = this->readConfigInt(Mokosh::config_ota_port.c_str(), 3232);
-        #endif
-
-        mdebugV("OTA is enabled. OTA port: %d", otaPort);
-        ArduinoOTA.setPort(otaPort);
-        ArduinoOTA.setHostname(this->hostNameC);
-
-        String hash = this->readConfigString(Mokosh::config_ota_password.c_str());
-        if (hash != "")
-            ArduinoOTA.setPasswordHash(hash.c_str());
-
-        MokoshOTAHandlers moc = this->OtaHandlers;
-
-        ArduinoOTA
-            .onStart([moc]() {
-                String type;
-                if (ArduinoOTA.getCommand() == U_FLASH) {
-                    type = "sketch";
-                } else {
-                    // U_SPIFFS
-                    type = "filesystem";
-                    LittleFS.end();
-                }
-                mdebugI("OTA started. Updating %s", type.c_str());
-                if (moc.onStart != nullptr)
-                    moc.onStart();
-            });
-
-        ArduinoOTA.onEnd([moc]() {
-            mdebugI("OTA finished.");
-            LittleFS.begin();
-            if (moc.onEnd != nullptr)
-                moc.onEnd();
-        });
-
-        ArduinoOTA.onProgress([moc](unsigned int progress, unsigned int total) {
-            mdebugV("OTA progress: %u%%\n", (progress / (total / 100)));
-            if (moc.onProgress != nullptr)
-                moc.onProgress(progress, total);
-        });
-
-        ArduinoOTA.onError([moc](ota_error_t error) {
-            String err;
-            if (error == OTA_AUTH_ERROR)
-                err = "auth error";
-            else if (error == OTA_BEGIN_ERROR)
-                err = "begin failed";
-            else if (error == OTA_CONNECT_ERROR)
-                err = "connect failed";
-            else if (error == OTA_RECEIVE_ERROR)
-                err = "receive failed";
-            else if (error == OTA_END_ERROR)
-                err = "end failed";
-
-            mdebugE("OTA failed with error %u (%s)", error, err.c_str());
-
-            if (moc.onError != nullptr)
-                moc.onError(error);
-        });
-
-        ArduinoOTA.begin();
-    }
-
-    mdebugI("Sending hello");
-    this->publishShortVersion();
-
-    mdebugV("Sending IP");
-    this->publishIP();
-
-    this->onInterval([&]() {
-        publish(_instance->heartbeat_topic.c_str(), millis());
-    },
-                     HEARTBEAT, "HEARTBEAT");
 
     mdebugI("Starting operations...");
 }
@@ -313,7 +338,7 @@ void Mokosh::setForceWiFiReconnect(bool value) {
     this->isForceWifiReconnect = value;
 }
 
-bool Mokosh::connectWifi() {
+wl_status_t Mokosh::connectWifi() {
     WiFi.enableAP(0);
     char fullHostName[32] = {0};
     sprintf(fullHostName, "%s_%s", this->prefix.c_str(), this->hostNameC);
@@ -332,7 +357,7 @@ bool Mokosh::connectWifi() {
 
     if (ssid == "") {
         mdebugE("Configured ssid is empty, cannot connect to Wi-Fi");
-        return false;
+        return wl_status_t::WL_NO_SSID_AVAIL;
     }
 
     WiFi.begin(ssid, password);
@@ -353,15 +378,13 @@ bool Mokosh::connectWifi() {
     }
     lastWifiStatus = wifiStatus;
 
-    bool status = lastWifiStatus == WL_CONNECTED;
-
-    if (status == true) {
+    if (lastWifiStatus == WL_CONNECTED) {
         Serial.println(" ok");
     } else {
         Serial.println(" fail");
     }
 
-    return status;
+    return lastWifiStatus;
 }
 
 Mokosh* Mokosh::getInstance() {
@@ -409,7 +432,9 @@ void Mokosh::loop() {
         }
     }
 
-    this->mqtt->loop();
+    if (this->mqtt != nullptr)
+        this->mqtt->loop();
+
     Debug.handle();
     ArduinoOTA.handle();
 }
@@ -693,8 +718,18 @@ void Mokosh::publish(const char* subtopic, const char* payload, boolean retained
     char topic[60] = {0};
     sprintf(topic, "%s_%s/%s", this->prefix.c_str(), this->hostNameC, subtopic);
 
+    if (this->client == nullptr) {
+        mdebugE("Cannot publish, Client was not constructed!");
+        return;
+    }
+
     if (!this->client->remoteIP().isSet()) {
-        mdebugW("Cannot publish, broker address is not configured");
+        mdebugE("Cannot publish, broker address is not configured");
+        return;
+    }
+
+    if (this->mqtt == nullptr) {
+        mdebugE("Cannot publish, MQTT Client was not constructed!");
         return;
     }
 

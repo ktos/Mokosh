@@ -48,7 +48,7 @@ class Mokosh {
 
     // starts Mokosh system, connects to the Wi-Fi and MQTT
     // using the provided device prefix
-    void begin(String prefix);
+    void begin(String prefix, bool autoconnect = true);
 
     // handles MQTT, interval and RemoteDebug loops, must be called
     // in loop()
@@ -206,6 +206,26 @@ class Mokosh {
     // returns if Wi-Fi is connected at all
     bool isWifiConnected();
 
+    // sends "hello" packet with version number and sets up heartbeat
+    // is being automatically run on begin() if autoconnect is true
+    void hello();
+
+    // sets up OTA in Wi-Fi networks
+    // is being automatically run on begin() if autoconnect is true
+    void setupOta();
+
+    // sets up Wi-Fi client
+    // is being automatically run on begin() if autoconnect is true
+    void setupWiFiClient();
+
+    // sets up MQTT client
+    // is being automatically run on begin() if autoconnect is true
+    void setupMqttClient();
+
+    // sets up RemoteDebug
+    // is being automatically run on begin() if autoconnect is true
+    void setupRemoteDebug();
+
    private:
     bool debugReady;
     String hostName;
@@ -232,7 +252,7 @@ class Mokosh {
 
     bool configFileExists();
     bool isConfigurationSet();
-    bool connectWifi();
+    wl_status_t connectWifi();
     bool configureMqttClient();
     bool reconnect();
 
