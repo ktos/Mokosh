@@ -52,11 +52,6 @@ typedef struct IntervalEvent {
 class Mokosh {
    public:
     Mokosh();
-    // sets internal configuration (wifi ssid, password, etc.) by hand
-    // instead of reading from config.json
-    // must be called before begin()
-    void setConfiguration(MokoshConfiguration config);
-
     // sets debug level verbosity, must be called before begin()
     void setDebugLevel(DebugLevel level);
 
@@ -167,9 +162,11 @@ class Mokosh {
     // the name of subtopic used for heartbeat messages
     const String heartbeat_topic = "debug/heartbeat";
 
-    // returns an object for usage with setConfiguration() based on given
-    // parameters
-    static MokoshConfiguration CreateConfiguration(const char* ssid, const char* password, const char* broker, uint16_t brokerPort);
+    const String broker_field = "broker";
+    const String broker_port_field = "brokerPort";
+    const String ota_port_field = "otaPort";
+    const String ssid_field = "ssid";
+    const String wifi_password_field = "password";
 
     // reads a given string field from config.json
     String readConfigString(const char* field, String def = "");
@@ -221,13 +218,12 @@ class Mokosh {
     bool debugReady;
     String hostName;
     char hostNameC[32];
-    String prefix;
-    MokoshConfiguration config;
+    String prefix;    
     IntervalEvent events[EVENTS_COUNT];
     String version = "1.0.0";
     String buildDate = "1970-01-01";
 
-    StaticJsonDocument<500> configJson;
+    StaticJsonDocument<500> config;
 
     WiFiClient* client;
     PubSubClient* mqtt;
@@ -241,9 +237,10 @@ class Mokosh {
 
     DebugLevel debugLevel = DebugLevel::WARNING;
 
-    bool configExists();
+    bool configFileExists();
     bool isConfigurationSet();
     bool connectWifi();
+    bool configureMqttClient();
     bool reconnect();
 
     void publishShortVersion();

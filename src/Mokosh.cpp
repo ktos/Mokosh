@@ -22,17 +22,6 @@ void _heartbeat() {
 
 RemoteDebug Debug;
 
-MokoshConfiguration Mokosh::CreateConfiguration(const char* ssid, const char* password, const char* broker, uint16_t brokerPort) {
-    MokoshConfiguration mc;
-
-    strcpy(mc.ssid, ssid);
-    strcpy(mc.password, password);
-    strcpy(mc.broker, broker);
-    mc.brokerPort = brokerPort;
-
-    return mc;
-}
-
 Mokosh::Mokosh() {
     _instance = this;
     Mokosh::debugReady = false;
@@ -50,7 +39,25 @@ void Mokosh::debug(DebugLevel level, const char* func, const char* fmt, ...) {
     va_end(argptr);
 
     if (!_instance->isDebugReady()) {
-        Serial.printf("(%s) %s [local debug]\n", func, dest);
+        switch (level) {
+            case DebugLevel::DEBUG:
+                Serial.printf("(D) (%s) %s [local debug]\n", func, dest);
+                break;
+            case DebugLevel::ERROR:
+                Serial.printf("(E) (%s) %s [local debug]\n", func, dest);
+                break;
+            case DebugLevel::INFO:
+                Serial.printf("(I) (%s) %s [local debug]\n", func, dest);
+                break;
+            case DebugLevel::WARNING:
+                Serial.printf("(W) (%s) %s [local debug]\n", func, dest);
+                break;
+            case DebugLevel::VERBOSE:
+                Serial.printf("(V) (%s) %s [local debug]\n", func, dest);
+                break;
+            default:
+                Serial.printf("(%s) %s [local debug]\n", func, dest);
+        }
     }
 
     if (Debug.isActive((uint8_t)level)) {
@@ -62,8 +69,20 @@ bool Mokosh::isDebugReady() {
     return this->debugReady;
 }
 
-void Mokosh::setConfiguration(MokoshConfiguration config) {
-    this->config = config;
+bool Mokosh::configureMqttClient() {
+    IPAddress broker;
+    String brokerAddress = this->readConfigString(Mokosh::broker_field.c_str());
+    if (brokerAddress == "") {
+        mdebugE("MQTT configuration is not provided!");
+        return false;
+    }
+
+    broker.fromString(brokerAddress);
+    uint16_t brokerPort = this->readConfigInt(Mokosh::broker_port_field.c_str());
+
+    this->mqtt->setServer(broker, brokerPort);
+    mdebugD("MQTT broker set to %s port %d", broker.toString().c_str(), brokerPort);
+    return true;
 }
 
 void Mokosh::begin(String prefix) {
@@ -96,9 +115,7 @@ void Mokosh::begin(String prefix) {
             }
         }
 
-        if (!this->isConfigurationSet()) {
-            this->reloadConfig();
-        }
+        this->reloadConfig();
     }
 
     if (!this->isConfigurationSet()) {
@@ -125,20 +142,17 @@ void Mokosh::begin(String prefix) {
     this->client = new WiFiClient();
     this->mqtt = new PubSubClient(*(this->client));
 
-    IPAddress broker;
-    broker.fromString(this->config.broker);
-
-    this->mqtt->setServer(broker, this->config.brokerPort);
-    mdebugD("MQTT broker set to %s port %d", broker.toString().c_str(), this->config.brokerPort);
-
-    if (!this->reconnect()) {
-        if (!this->isIgnoringConnectionErrors)
-            this->error(Mokosh::Error_MQTT);
+    if (this->configureMqttClient()) {
+        if (!this->reconnect()) {
+            if (!this->isIgnoringConnectionErrors)
+                this->error(Mokosh::Error_MQTT);
+        }
     }
 
     if (this->client->connected() && this->isOTAEnabled) {
-        mdebugV("OTA is enabled. OTA port: %d", this->OTA.port);
-        ArduinoOTA.setPort(this->OTA.port);
+        uint16_t otaPort = this->readConfigInt(Mokosh::ota_port_field.c_str(), 3232);
+        mdebugV("OTA is enabled. OTA port: %d", otaPort);
+        ArduinoOTA.setPort(otaPort);
         ArduinoOTA.setHostname(this->hostNameC);
 
         MokoshOTAConfiguration moc = this->OTA;
@@ -270,7 +284,7 @@ PubSubClient* Mokosh::getPubSubClient() {
 }
 
 bool Mokosh::isConfigurationSet() {
-    return strcmp(this->config.ssid, "") != 0;
+    return this->readConfigString("ssid") != "";
 }
 
 bool Mokosh::isWifiConnected() {
@@ -292,7 +306,16 @@ bool Mokosh::connectWifi() {
     WiFi.config(INADDR_NONE, INADDR_NONE, INADDR_NONE);
     WiFi.setHostname(fullHostName);
 #endif
-    WiFi.begin(this->config.ssid, this->config.password);
+
+    String ssid = readConfigString(ssid_field.c_str(), "");
+    String password = readConfigString(wifi_password_field.c_str());
+
+    if (ssid == "") {
+        mdebugE("Configured ssid is empty, cannot connect to Wi-Fi");
+        return false;
+    }
+
+    WiFi.begin(ssid, password);
 
     unsigned long startTime = millis();
     while (WiFi.status() != WL_CONNECTED && millis() - startTime < 10000) {
@@ -315,7 +338,7 @@ Mokosh* Mokosh::getInstance() {
     return _instance;
 }
 
-bool Mokosh::configExists() {
+bool Mokosh::configFileExists() {
     File configFile = LittleFS.open("/config.json", "r");
 
     if (!configFile) {
@@ -352,57 +375,57 @@ void Mokosh::loop() {
 }
 
 String Mokosh::readConfigString(const char* field, String def) {
-    if (!this->configJson.containsKey(field)) {
+    if (!this->config.containsKey(field)) {
         mdebugW("config.json field %s does not exist!", field);
         return def;
     }
-    
-    const char* data = this->configJson[field];
+
+    const char* data = this->config[field];
     mdebugV("Read config.json string field %s, value %s", field, data);
     return String(data);
 }
 
 int Mokosh::readConfigInt(const char* field, int def) {
-    if (!this->configJson.containsKey(field)) {
+    if (!this->config.containsKey(field)) {
         mdebugW("config.json field %s does not exist!", field);
         return def;
     }
-    
-    int data = this->configJson[field];
+
+    int data = this->config[field];
     mdebugV("Read config.json int field %s, value %d", field, data);
     return data;
 }
 
 float Mokosh::readConfigFloat(const char* field, float def) {
-    if (!this->configJson.containsKey(field)) {
+    if (!this->config.containsKey(field)) {
         mdebugW("config.json field %s does not exist!", field);
         return def;
     }
 
-    float data = this->configJson[field];
+    float data = this->config[field];
     mdebugV("Read config.json float field %s, value %f", field, data);
     return data;
 }
 
 void Mokosh::setConfig(const char* field, String value) {
     mdebugV("Settings config.json field %s to string %s", field, value.c_str());
-    this->configJson[field] = value;
+    this->config[field] = value;
 }
 
 void Mokosh::setConfig(const char* field, int value) {
     mdebugV("Settings config.json field %s to int %d", field, value);
-    this->configJson[field] = value;
+    this->config[field] = value;
 }
 
 void Mokosh::setConfig(const char* field, float value) {
     mdebugV("Settings config.json field %s to float %f", field, value);
-    this->configJson[field] = value;
+    this->config[field] = value;
 }
 
 void Mokosh::saveConfig() {
     mdebugV("Saving config.json");
     File configFile = LittleFS.open("/config.json", "w");
-    serializeJson(this->configJson, configFile);
+    serializeJson(this->config, configFile);
 }
 
 bool Mokosh::reloadConfig() {
@@ -420,18 +443,7 @@ bool Mokosh::reloadConfig() {
         return false;
     }
 
-    deserializeJson(this->configJson, configFile);
-
-    const char* ssid = this->configJson["ssid"];
-    strcpy(this->config.ssid, ssid);
-
-    const char* password = this->configJson["password"];
-    strcpy(this->config.password, password);
-
-    const char* broker = this->configJson["broker"];
-    strcpy(this->config.broker, broker);
-
-    this->config.brokerPort = this->configJson["brokerPort"];
+    deserializeJson(this->config, configFile);
 
     return true;
 }
@@ -649,6 +661,11 @@ void Mokosh::publish(const char* subtopic, const char* payload) {
 void Mokosh::publish(const char* subtopic, const char* payload, boolean retained) {
     char topic[60] = {0};
     sprintf(topic, "%s_%s/%s", this->prefix.c_str(), this->hostNameC, subtopic);
+
+    if (!this->client->remoteIP().isSet()) {
+        mdebugW("Cannot publish, broker address is not configured");
+        return;
+    }
 
     if (!this->client->connected()) {
         this->reconnect();
