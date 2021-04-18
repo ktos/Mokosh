@@ -127,7 +127,7 @@ void Mokosh::setupOta() {
     MokoshOTAHandlers moc = this->OtaHandlers;
 
     ArduinoOTA
-        .onStart([moc]() {
+        .onStart([&]() {
             String type;
             if (ArduinoOTA.getCommand() == U_FLASH) {
                 type = "sketch";
@@ -136,14 +136,19 @@ void Mokosh::setupOta() {
                 type = "filesystem";
                 LittleFS.end();
             }
+
+            this->isOTAInProgress = true;
+
             mdebugI("OTA started. Updating %s", type.c_str());
             if (moc.onStart != nullptr)
                 moc.onStart();
         });
 
-    ArduinoOTA.onEnd([moc]() {
+    ArduinoOTA.onEnd([&]() {
         mdebugI("OTA finished.");
         LittleFS.begin();
+        this->isOTAInProgress = false;
+
         if (moc.onEnd != nullptr)
             moc.onEnd();
     });
@@ -605,7 +610,7 @@ void Mokosh::onInterval(THandlerFunction func, unsigned long time, String name) 
     mdebugV("Registering interval function %s on time %ld", name.c_str(), time);
 
     IntervalEvent* first = NULL;
-    
+
     for (uint8_t i = 0; i < EVENTS_COUNT; i++) {
         if (events[i].interval == 0) {
             first = &events[i];

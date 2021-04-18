@@ -18,8 +18,8 @@
 #include <PubSubClient.h>
 #include <RemoteDebug.h>
 
-#include "MokoshHandlers.hpp"
 #include "MokoshConfig.hpp"
+#include "MokoshHandlers.hpp"
 
 // Debug level - starts from 0 to 6, higher is more severe
 typedef enum DebugLevel {
@@ -65,8 +65,6 @@ class MokoshErrors {
     // error code thrown when MQTT broker connection fails
     static const uint8_t MqttConnectionFailed = 5;
 };
-
-
 
 // the main class for the framework, must be initialized in your code
 class Mokosh {
