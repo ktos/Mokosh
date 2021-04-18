@@ -219,6 +219,7 @@ void Mokosh::begin(String prefix, bool autoconnect) {
     this->prefix = prefix;
     this->hostName = String(hostString);
     strcpy(this->hostNameC, hostName.c_str());
+    mdebugD("ID: %s", hostString);
 
     if (this->isFSEnabled) {
         if (!this->config.prepareFS()) {
@@ -395,7 +396,7 @@ wl_status_t Mokosh::connectWifi() {
         Serial.println(" ok");
     } else {
         Serial.println(" fail");
-    }    
+    }
 
     return lastWifiStatus;
 }
