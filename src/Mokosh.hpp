@@ -9,15 +9,6 @@
 
 #include "MokoshHandlers.hpp"
 
-// handler for errors, used in onError
-using f_error_handler_t = void (*)(int);
-
-// handler for commands, used in onCommand
-using f_command_handler_t = void (*)(uint8_t*, unsigned int);
-
-// handler for interval functions, used in onInterval
-using f_interval_t = void (*)();
-
 // Debug level - starts from 0 to 6, higher is more severe
 typedef enum DebugLevel {
     PROFILER = 0,
@@ -111,11 +102,11 @@ class Mokosh {
     // defines callback to be run when command not handled by internal
     // means is received
     // must be called before begin()
-    void onCommand(f_command_handler_t handler);
+    THandlerFunction_Command onCommand;
 
     // defines callback to be run when error is thrown
     // must be called before begin()
-    void onError(f_error_handler_t handler);
+    THandlerFunction_MokoshError onError;
 
     // defines callback function func to be run on a specific time interval
     // Mokosh will automatically fire the function when time (in milliseconds)
@@ -216,9 +207,6 @@ class Mokosh {
     bool isWifiConnected();
 
    private:
-    f_error_handler_t errorHandler;
-    f_command_handler_t commandHandler;
-
     bool debugReady;
     String hostName;
     char hostNameC[32];

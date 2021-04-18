@@ -16,10 +16,6 @@ void _mqtt_callback(char* topic, uint8_t* message, unsigned int length) {
     _instance->mqttCommandReceived(topic, message, length);
 }
 
-void _heartbeat() {
-    _instance->publish(_instance->heartbeat_topic.c_str(), millis());
-}
-
 RemoteDebug Debug;
 
 Mokosh::Mokosh() {
@@ -649,9 +645,9 @@ void Mokosh::mqttCommandReceived(char* topic, uint8_t* message, unsigned int len
         }
     }
 
-    if (this->commandHandler != nullptr) {
+    if (this->onCommand != nullptr) {
         mdebugD("Passing message to custom command handler");
-        this->commandHandler(message, length);
+        this->onCommand(message, length);
     }
 }
 
@@ -673,10 +669,6 @@ void Mokosh::onInterval(THandlerFunction func, unsigned long time, String name) 
         first->interval = time;
         first->name = name;
     }
-}
-
-void Mokosh::onError(f_error_handler_t handler) {
-    this->errorHandler = handler;
 }
 
 void Mokosh::publish(const char* subtopic, String payload) {
@@ -717,9 +709,9 @@ void Mokosh::error(int code) {
         Serial.println(", debug not ready.");
     }
 
-    if (this->errorHandler != nullptr) {
+    if (this->onError != nullptr) {
         mdebugV("Handler called for error %d", code);
-        this->errorHandler(code);
+        this->onError(code);
     } else {
         if (this->isRebootOnError) {
             mdebugE("Unhandled error, code: %d, reboot imminent.", code);
@@ -740,10 +732,6 @@ void Mokosh::error(int code) {
             }
         }
     }
-}
-
-void Mokosh::onCommand(f_command_handler_t handler) {
-    this->commandHandler = handler;
 }
 
 void Mokosh::enableRebootOnError() {
