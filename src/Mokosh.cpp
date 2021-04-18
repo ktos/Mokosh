@@ -35,25 +35,31 @@ MokoshConfiguration Mokosh::CreateConfiguration(const char* ssid, const char* pa
 
 Mokosh::Mokosh() {
     _instance = this;
-    this->debugReady = false;
+    Mokosh::debugReady = false;
 
     // initialize interval events table
     for (uint8_t i = 0; i < EVENTS_COUNT; i++)
         events[i].interval = 0;
-
-    //this->OTA = new MokoshOTAConfiguration();
 }
 
 void Mokosh::debug(DebugLevel level, const char* func, const char* fmt, ...) {
-    if (Debug.isActive((uint8_t)level)) {
-        char dest[256];
-        va_list argptr;
-        va_start(argptr, fmt);
-        vsprintf(dest, fmt, argptr);
-        va_end(argptr);
+    char dest[256];
+    va_list argptr;
+    va_start(argptr, fmt);
+    vsprintf(dest, fmt, argptr);
+    va_end(argptr);
 
+    if (!_instance->isDebugReady()) {
+        Serial.printf("(%s) %s [local debug]\n", func, dest);
+    }
+
+    if (Debug.isActive((uint8_t)level)) {
         Debug.printf("(%s) %s\n", func, dest);
     }
+}
+
+bool Mokosh::isDebugReady() {
+    return this->debugReady;
 }
 
 void Mokosh::setConfiguration(MokoshConfiguration config) {
@@ -109,7 +115,11 @@ void Mokosh::begin(String prefix) {
 
         mdebugI("IP: %s", WiFi.localIP().toString().c_str());
     } else {
-        this->error(Mokosh::Error_WIFI);
+        if (!this->isIgnoringConnectionErrors) {
+            this->error(Mokosh::Error_WIFI);
+        } else {
+            mdebugD("Wi-Fi connection error, ignored.");
+        }
     }
 
     this->client = new WiFiClient();
@@ -122,10 +132,11 @@ void Mokosh::begin(String prefix) {
     mdebugD("MQTT broker set to %s port %d", broker.toString().c_str(), this->config.brokerPort);
 
     if (!this->reconnect()) {
-        this->error(Mokosh::Error_MQTT);
+        if (!this->isIgnoringConnectionErrors)
+            this->error(Mokosh::Error_MQTT);
     }
 
-    if (this->isOTAEnabled) {
+    if (this->client->connected() && this->isOTAEnabled) {
         mdebugV("OTA is enabled. OTA port: %d", this->OTA.port);
         ArduinoOTA.setPort(this->OTA.port);
         ArduinoOTA.setHostname(this->hostNameC);
@@ -183,7 +194,7 @@ void Mokosh::begin(String prefix) {
     mdebugI("Sending hello");
     this->publishShortVersion();
 
-    mdebugD("Sending IP");
+    mdebugV("Sending IP");
     this->publishIP();
 
     this->onInterval(_heartbeat, HEARTBEAT);
@@ -196,7 +207,7 @@ void Mokosh::publishIP() {
     char ipbuf[15] = {0};
     WiFi.localIP().toString().toCharArray(ipbuf, 15);
     snprintf(msg, sizeof(msg) - 1, "{\"ipaddress\": \"%s\"}", ipbuf);
-    
+
     this->publish(debug_ip_topic.c_str(), msg);
 }
 
@@ -205,8 +216,20 @@ void Mokosh::disableFS() {
 }
 
 bool Mokosh::reconnect() {
-    if (client->connected())
+    if (this->mqtt->connected())
         return true;
+
+    if (!this->isWifiConnected() && this->isForceWifiReconnect) {
+        mdebugV("Wi-Fi is not connected at all, forcing reconnect.");
+        bool result = this->connectWifi();
+        if (!result) {
+            if (this->isIgnoringConnectionErrors) {
+                mdebugE("Failed to reconnect to Wi-Fi");
+            } else {
+                this->error(Mokosh::Error_WIFI);
+            }
+        }
+    }
 
     uint8_t trials = 0;
 
@@ -223,6 +246,11 @@ bool Mokosh::reconnect() {
 
             return true;
         } else {
+            if (this->isIgnoringConnectionErrors) {
+                mdebugV("Client not connected, but ignoring.");
+                return false;
+            }
+
             mdebugE("MQTT failed: %d", mqtt->state());
 
             // if not connected in the third trial, give up
@@ -245,6 +273,14 @@ bool Mokosh::isConfigurationSet() {
     return strcmp(this->config.ssid, "") != 0;
 }
 
+bool Mokosh::isWifiConnected() {
+    return WiFi.status() == WL_CONNECTED;
+}
+
+void Mokosh::setForceWiFiReconnect(bool value) {
+    this->isForceWifiReconnect = value;
+}
+
 bool Mokosh::connectWifi() {
     WiFi.enableAP(0);
     char fullHostName[32] = {0};
@@ -264,8 +300,15 @@ bool Mokosh::connectWifi() {
         delay(250);
     }
 
-    // Check connection
-    return (WiFi.status() == WL_CONNECTED);
+    bool status = WiFi.status() == WL_CONNECTED;
+
+    if (status == true) {
+        Serial.println(" ok");
+    } else {
+        Serial.println(" fail");
+    }
+
+    return status;
 }
 
 Mokosh* Mokosh::getInstance() {
@@ -391,8 +434,10 @@ void Mokosh::publishShortVersion() {
     if (sep != -1) {
         String ver = this->version.substring(0, sep);
         this->publish(version_topic.c_str(), ver);
+        mdebugV("Version: %s", ver.c_str());
     } else {
         this->publish(version_topic.c_str(), this->version);
+        mdebugV("Version: %s", this->version.c_str());
     }
 }
 
@@ -622,9 +667,9 @@ void Mokosh::error(int code) {
         } else {
             mdebugE("Unhandled error, code: %d, going loop.", code);
             if (this->debugReady) {
-                if (this->client->connected() && this->mqtt->state() == MQTT_CONNECTED) {                                        
+                if (this->client->connected() && this->mqtt->state() == MQTT_CONNECTED) {
                     this->publish(this->heartbeat_topic.c_str(), "error_loop", true);
-                }                
+                }
             } else {
                 Serial.print("Going loop.");
             }
@@ -651,4 +696,8 @@ void Mokosh::setBuildMetadata(String version, String buildDate) {
 
 void Mokosh::enableOTA() {
     this->isOTAEnabled = true;
+}
+
+void Mokosh::setIgnoreConnectionErrors(bool value) {
+    this->isIgnoringConnectionErrors = value;
 }
