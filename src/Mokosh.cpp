@@ -225,11 +225,7 @@ void Mokosh::begin(String prefix, bool autoconnect) {
         }
 
         this->config.reload();
-    }
-
-    if (!this->config.isConfigurationSet()) {
-        this->error(MokoshErrors::ConfigurationError);
-    }
+    }    
 
     if (autoconnect) {
         this->connectWifi();
