@@ -35,7 +35,7 @@ MokoshConfiguration Mokosh::CreateConfiguration(const char* ssid, const char* pa
 
 Mokosh::Mokosh() {
     _instance = this;
-    this->debugReady = false;
+    Mokosh::debugReady = false;
 
     // initialize interval events table
     for (uint8_t i = 0; i < EVENTS_COUNT; i++)
@@ -54,6 +54,10 @@ void Mokosh::debug(DebugLevel level, const char* func, const char* fmt, ...) {
 
         Debug.printf("(%s) %s\n", func, dest);
     }
+}
+
+bool Mokosh::isDebugReady() {
+    return false;
 }
 
 void Mokosh::setConfiguration(MokoshConfiguration config) {
@@ -105,11 +109,15 @@ void Mokosh::begin(String prefix) {
         Debug.setResetCmdEnabled(true);
         Debug.showTime(true);
 
-        this->debugReady = true;
+        Mokosh::debugReady = true;
 
         mdebugI("IP: %s", WiFi.localIP().toString().c_str());
     } else {
-        this->error(Mokosh::Error_WIFI);
+        if (!this->isIgnoringConnectionErrors) {
+            this->error(Mokosh::Error_WIFI);
+        } else {
+            mdebugD("Wi-Fi connection error, ignored.");
+        }
     }
 
     this->client = new WiFiClient();
@@ -122,10 +130,11 @@ void Mokosh::begin(String prefix) {
     mdebugD("MQTT broker set to %s port %d", broker.toString().c_str(), this->config.brokerPort);
 
     if (!this->reconnect()) {
-        this->error(Mokosh::Error_MQTT);
+        if (!this->isIgnoringConnectionErrors)
+            this->error(Mokosh::Error_MQTT);
     }
 
-    if (this->isOTAEnabled) {
+    if (this->client->connected() && this->isOTAEnabled) {
         mdebugV("OTA is enabled. OTA port: %d", this->OTA.port);
         ArduinoOTA.setPort(this->OTA.port);
         ArduinoOTA.setHostname(this->hostNameC);
@@ -196,7 +205,7 @@ void Mokosh::publishIP() {
     char ipbuf[15] = {0};
     WiFi.localIP().toString().toCharArray(ipbuf, 15);
     snprintf(msg, sizeof(msg) - 1, "{\"ipaddress\": \"%s\"}", ipbuf);
-    
+
     this->publish(debug_ip_topic.c_str(), msg);
 }
 
@@ -262,7 +271,7 @@ bool Mokosh::connectWifi() {
     while (WiFi.status() != WL_CONNECTED && millis() - startTime < 10000) {
         Serial.print(".");
         delay(250);
-    }
+    }    
 
     // Check connection
     return (WiFi.status() == WL_CONNECTED);
@@ -285,7 +294,7 @@ bool Mokosh::configExists() {
 void Mokosh::setDebugLevel(DebugLevel level) {
     this->debugLevel = level;
 
-    if (this->debugReady) {
+    if (Mokosh::debugReady) {
         mdebugW("Setting mdebug level should be before begin(), ignoring for internals.");
     }
 }
@@ -605,7 +614,7 @@ void Mokosh::publish(const char* subtopic, float payload) {
 }
 
 void Mokosh::error(int code) {
-    if (!this->debugReady) {
+    if (!Mokosh::debugReady) {
         Serial.print("Critical error: ");
         Serial.print(code);
         Serial.println(", debug not ready.");
@@ -621,10 +630,10 @@ void Mokosh::error(int code) {
             ESP.restart();
         } else {
             mdebugE("Unhandled error, code: %d, going loop.", code);
-            if (this->debugReady) {
-                if (this->client->connected() && this->mqtt->state() == MQTT_CONNECTED) {                                        
+            if (Mokosh::debugReady) {
+                if (this->client->connected() && this->mqtt->state() == MQTT_CONNECTED) {
                     this->publish(this->heartbeat_topic.c_str(), "error_loop", true);
-                }                
+                }
             } else {
                 Serial.print("Going loop.");
             }
@@ -651,4 +660,8 @@ void Mokosh::setBuildMetadata(String version, String buildDate) {
 
 void Mokosh::enableOTA() {
     this->isOTAEnabled = true;
+}
+
+void Mokosh::setIgnoreConnectionErrors(bool value) {
+    this->isIgnoringConnectionErrors = value;
 }

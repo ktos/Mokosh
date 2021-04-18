@@ -200,6 +200,13 @@ class Mokosh {
     // property with all possible OTA parameters
     MokoshOTAConfiguration OTA;
 
+    // sets ignoring connection errors - useful in example of deep sleep
+    // so the device is going to sleep again if wifi networks/mqtt are not
+    // available
+    void setIgnoreConnectionErrors(bool value);
+
+    static bool isDebugReady();
+
    private:
     f_error_handler_t errorHandler;
     f_command_handler_t commandHandler;
@@ -222,6 +229,7 @@ class Mokosh {
     bool isRebootOnError = false;
     bool isOTAEnabled = false;
     bool isOTAInProgress = false;
+    bool isIgnoringConnectionErrors = false;
 
     DebugLevel debugLevel = DebugLevel::WARNING;
 
