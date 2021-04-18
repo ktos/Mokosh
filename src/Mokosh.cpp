@@ -184,8 +184,6 @@ void Mokosh::setupOta() {
 void Mokosh::hello() {
     mdebugI("Sending hello");
     this->publishShortVersion();
-
-    mdebugV("Sending IP");
     this->publishIP();
 
     this->onInterval([&]() {
@@ -225,7 +223,7 @@ void Mokosh::begin(String prefix, bool autoconnect) {
         }
 
         this->config.reload();
-    }    
+    }
 
     if (autoconnect) {
         this->connectWifi();
@@ -257,10 +255,14 @@ void Mokosh::begin(String prefix, bool autoconnect) {
 void Mokosh::publishIP() {
     char msg[64] = {0};
     char ipbuf[15] = {0};
-    WiFi.localIP().toString().toCharArray(ipbuf, 15);
-    snprintf(msg, sizeof(msg) - 1, "{\"ipaddress\": \"%s\"}", ipbuf);
 
-    this->publish(debug_ip_topic.c_str(), msg);
+    if (this->isWifiConnected()) {
+        WiFi.localIP().toString().toCharArray(ipbuf, 15);
+        snprintf(msg, sizeof(msg) - 1, "{\"ipaddress\": \"%s\"}", ipbuf);
+
+        mdebugV("Sending IP");
+        this->publish(debug_ip_topic.c_str(), msg);
+    }
 }
 
 void Mokosh::disableLoadingConfigFile() {
