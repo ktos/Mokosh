@@ -24,3 +24,9 @@ class MokoshWiFiHandlers {
         THandlerFunction onDisconnect;
 
 };
+
+class MokoshEvents {
+    public:
+        THandlerFunction onReconnectRequested;        
+
+};

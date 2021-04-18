@@ -14,7 +14,7 @@ Mokosh::Mokosh() {
 
     // initialize interval events table
     for (uint8_t i = 0; i < EVENTS_COUNT; i++)
-        events[i].interval = 0;
+        this->intervalEvents[i].interval = 0;
 }
 
 void Mokosh::debug(DebugLevel level, const char* func, const char* fmt, ...) {
@@ -124,7 +124,7 @@ void Mokosh::setupOta() {
     if (hash != "")
         ArduinoOTA.setPasswordHash(hash.c_str());
 
-    MokoshOTAHandlers moc = this->OtaHandlers;
+    MokoshOTAHandlers moc = this->otaEvents;
 
     ArduinoOTA
         .onStart([&]() {
@@ -186,10 +186,13 @@ void Mokosh::hello() {
     this->publishShortVersion();
     this->publishIP();
 
-    this->onInterval([&]() {
-        publish(_instance->heartbeat_topic, millis());
-    },
-                     HEARTBEAT, "MOKOSH_HEARTBEAT");
+    if (this->isHeartbeatEnabled) {
+        this->onInterval([&]() {
+            if (this->isHeartbeatEnabled)
+                publish(_instance->heartbeat_topic, millis());
+        },
+                         HEARTBEAT, "MOKOSH_HEARTBEAT");
+    }
 }
 
 void Mokosh::begin(String prefix, bool autoconnect) {
@@ -237,6 +240,7 @@ void Mokosh::begin(String prefix, bool autoconnect) {
             }
 
             this->hello();
+            this->isWifiConfigured = true;
         } else {
             if (!this->isIgnoringConnectionErrors) {
                 this->error(MokoshErrors::CannotConnectToWifi);
@@ -272,15 +276,22 @@ bool Mokosh::reconnect() {
     if (this->mqtt->connected())
         return true;
 
-    if (!this->isWifiConnected() && this->isForceWifiReconnect) {
-        mdebugV("Wi-Fi is not connected at all, forcing reconnect.");
-        bool result = this->connectWifi();
-        if (!result) {
-            if (this->isIgnoringConnectionErrors) {
-                mdebugE("Failed to reconnect to Wi-Fi");
-            } else {
-                this->error(MokoshErrors::CannotConnectToWifi);
+    if (this->isWifiConfigured) {
+        if (!this->isWifiConnected() && this->isForceWifiReconnect) {
+            mdebugV("Wi-Fi is not connected at all, forcing reconnect.");
+            bool result = this->connectWifi();
+            if (!result) {
+                if (this->isIgnoringConnectionErrors) {
+                    mdebugE("Failed to reconnect to Wi-Fi");
+                } else {
+                    this->error(MokoshErrors::CannotConnectToWifi);
+                }
             }
+        }
+    } else {
+        mdebugV("Wi-Fi is not configured, raising onReconnectRequest event.");
+        if (this->events.onReconnectRequested != nullptr) {
+            this->events.onReconnectRequested();
         }
     }
 
@@ -335,6 +346,10 @@ void Mokosh::setForceWiFiReconnect(bool value) {
     this->isForceWifiReconnect = value;
 }
 
+void Mokosh::setHeartbeatEnabled(bool value) {
+    this->isHeartbeatEnabled = value;
+}
+
 wl_status_t Mokosh::connectWifi() {
     WiFi.enableAP(0);
     char fullHostName[32] = {0};
@@ -358,6 +373,7 @@ wl_status_t Mokosh::connectWifi() {
     }
 
     WiFi.begin(ssid.c_str(), password.c_str());
+    this->isWifiConfigured = true;
 
     unsigned long startTime = millis();
     while (WiFi.status() != WL_CONNECTED && millis() - startTime < 10000) {
@@ -367,11 +383,11 @@ wl_status_t Mokosh::connectWifi() {
 
     wl_status_t wifiStatus = WiFi.status();
     if (wifiStatus != lastWifiStatus && wifiStatus == WL_CONNECTED) {
-        if (this->WiFiHandlers.onConnect != nullptr)
-            this->WiFiHandlers.onConnect();
+        if (this->wifiEvents.onConnect != nullptr)
+            this->wifiEvents.onConnect();
     } else if (wifiStatus != lastWifiStatus && wifiStatus == WL_CONNECT_FAILED) {
-        if (this->WiFiHandlers.onConnectFail != nullptr)
-            this->WiFiHandlers.onConnectFail();
+        if (this->wifiEvents.onConnectFail != nullptr)
+            this->wifiEvents.onConnectFail();
     }
     lastWifiStatus = wifiStatus;
 
@@ -379,7 +395,7 @@ wl_status_t Mokosh::connectWifi() {
         Serial.println(" ok");
     } else {
         Serial.println(" fail");
-    }
+    }    
 
     return lastWifiStatus;
 }
@@ -400,11 +416,11 @@ void Mokosh::loop() {
     unsigned long now = millis();
 
     for (uint8_t i = 0; i < EVENTS_COUNT; i++) {
-        if (events[i].interval != 0) {
-            if (now - events[i].last > events[i].interval) {
-                mdebugV("Executing interval func %s on time %ld", events[i].name.c_str(), events[i].interval);
-                events[i].handler();
-                events[i].last = now;
+        if (this->intervalEvents[i].interval != 0) {
+            if (now - intervalEvents[i].last > intervalEvents[i].interval) {
+                mdebugV("Executing interval func %s on time %ld", intervalEvents[i].name.c_str(), intervalEvents[i].interval);
+                intervalEvents[i].handler();
+                intervalEvents[i].last = now;
             }
         }
     }
@@ -414,8 +430,8 @@ void Mokosh::loop() {
         lastWifiStatus = wifiStatus;
 
         if (lastWifiStatus == WL_DISCONNECTED) {
-            if (this->WiFiHandlers.onDisconnect != nullptr)
-                this->WiFiHandlers.onDisconnect();
+            if (this->wifiEvents.onDisconnect != nullptr)
+                this->wifiEvents.onDisconnect();
         }
     }
 
@@ -606,8 +622,8 @@ void Mokosh::mqttCommandReceived(char* topic, uint8_t* message, unsigned int len
 void Mokosh::onInterval(THandlerFunction func, unsigned long time, String name) {
     IntervalEvent* first = NULL;
     for (uint8_t i = 0; i < EVENTS_COUNT; i++) {
-        if (events[i].name == name) {
-            first = &events[i];
+        if (intervalEvents[i].name == name) {
+            first = &intervalEvents[i];
             break;
         }
     }
@@ -615,8 +631,8 @@ void Mokosh::onInterval(THandlerFunction func, unsigned long time, String name) 
     if (first == NULL) {
         mdebugV("Registering interval function %s on time %ld", name.c_str(), time);
         for (uint8_t i = 0; i < EVENTS_COUNT; i++) {
-            if (events[i].interval == 0) {
-                first = &events[i];
+            if (intervalEvents[i].interval == 0) {
+                first = &intervalEvents[i];
                 break;
             }
         }

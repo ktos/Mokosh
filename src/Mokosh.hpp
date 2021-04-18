@@ -170,11 +170,14 @@ class Mokosh {
 
     void mqttCommandReceived(char* topic, uint8_t* message, unsigned int length);
 
-    // handlers for OTA situations (onStart, onEnd, etc.)
-    MokoshOTAHandlers OtaHandlers;
+    // event handlers for OTA situations (onStart, onEnd, etc.)
+    MokoshOTAHandlers otaEvents;
 
-    // handlers for Wi-Fi situations (onConnect, onDisconnect)
-    MokoshWiFiHandlers WiFiHandlers;
+    // event handlers for Wi-Fi situations (onConnect, onDisconnect)
+    MokoshWiFiHandlers wifiEvents;
+
+    // handlers for additional events
+    MokoshEvents events;
 
     // sets ignoring connection errors - useful in example of deep sleep
     // so the device is going to sleep again if wifi networks/mqtt are not
@@ -183,6 +186,9 @@ class Mokosh {
 
     // sets if the Wi-Fi should be reconnected on MQTT reconnect if needed
     void setForceWiFiReconnect(bool value);
+
+    // sets if the heartbeat messages should be send    
+    void setHeartbeatEnabled(bool value);
 
     // returns if the RemoteDebug is ready
     bool isDebugReady();
@@ -222,7 +228,7 @@ class Mokosh {
     String hostName;
     char hostNameC[32];
     String prefix;
-    IntervalEvent events[EVENTS_COUNT];
+    IntervalEvent intervalEvents[EVENTS_COUNT];
     String version = "1.0.0";
     String buildDate = "1970-01-01";    
 
@@ -236,6 +242,8 @@ class Mokosh {
     bool isMqttConfigured = false;
     bool isIgnoringConnectionErrors = false;
     bool isForceWifiReconnect = false;
+    bool isWifiConfigured = false;
+    bool isHeartbeatEnabled = true;
     wl_status_t lastWifiStatus;
 
     DebugLevel debugLevel = DebugLevel::WARNING;
