@@ -1,15 +1,5 @@
 #include "Mokosh.hpp"
 
-#if defined(ESP8266)
-#include <LittleFS.h>
-#endif
-
-#if defined(ESP32)
-#include <SPIFFS.h>
-#define LittleFS SPIFFS
-#include <ESPmDNS.h>
-#endif
-
 static Mokosh* _instance;
 
 void _mqtt_callback(char* topic, uint8_t* message, unsigned int length) {
@@ -70,17 +60,17 @@ bool Mokosh::isDebugReady() {
 
 bool Mokosh::configureMqttClient() {
     IPAddress broker;
-    String brokerAddress = this->readConfigString(Mokosh::config_broker.c_str());
+    String brokerAddress = this->config.readConfigString(this->config.config_broker.c_str());
     if (brokerAddress == "") {
         mdebugE("MQTT configuration is not provided!");
         return false;
     }
 
     broker.fromString(brokerAddress);
-    uint16_t brokerPort = this->readConfigInt(Mokosh::config_broker_port.c_str(), 1883);
+    uint16_t brokerPort = this->config.readConfigInt(this->config.config_broker_port.c_str(), 1883);
 
     this->mqtt->setServer(broker, brokerPort);
-    mdebugD("MQTT broker set to %s port %d", broker.toString().c_str(), brokerPort);    
+    mdebugD("MQTT broker set to %s port %d", broker.toString().c_str(), brokerPort);
 
     this->isMqttConfigured = true;
     return true;
@@ -111,7 +101,7 @@ void Mokosh::setupMqttClient() {
     if (this->configureMqttClient()) {
         if (!this->reconnect()) {
             if (!this->isIgnoringConnectionErrors)
-                this->error(Mokosh::Error_MQTT);
+                this->error(MokoshErrors::MqttConnectionFailed);
         }
     }
 }
@@ -119,18 +109,18 @@ void Mokosh::setupMqttClient() {
 void Mokosh::setupOta() {
     uint16_t otaPort = 3232;
 #if defined(ESP8266)
-    otaPort = this->readConfigInt(Mokosh::config_ota_port.c_str(), 8266);
+    otaPort = this->config.readConfigInt(this->config.config_ota_port.c_str(), 8266);
 #endif
 
 #if defined(ESP32)
-    otaPort = this->readConfigInt(Mokosh::config_ota_port.c_str(), 3232);
+    otaPort = this->config.readConfigInt(this->config.config_ota_port.c_str(), 3232);
 #endif
 
     mdebugV("OTA is enabled. OTA port: %d", otaPort);
     ArduinoOTA.setPort(otaPort);
     ArduinoOTA.setHostname(this->hostNameC);
 
-    String hash = this->readConfigString(Mokosh::config_ota_password.c_str());
+    String hash = this->config.readConfigString(this->config.config_ota_password.c_str());
     if (hash != "")
         ArduinoOTA.setPasswordHash(hash.c_str());
 
@@ -225,17 +215,15 @@ void Mokosh::begin(String prefix, bool autoconnect) {
     strcpy(this->hostNameC, hostName.c_str());
 
     if (this->isFSEnabled) {
-        if (!LittleFS.begin()) {
-            if (!LittleFS.format()) {
-                this->error(Mokosh::Error_FS);
-            }
+        if (!this->config.prepareFS()) {
+            this->error(MokoshErrors::FileSystemNotAvailable);
         }
 
-        this->reloadConfig();
+        this->config.reloadConfig();
     }
 
-    if (!this->isConfigurationSet()) {
-        this->error(Mokosh::Error_CONFIG);
+    if (!this->config.isConfigurationSet()) {
+        this->error(MokoshErrors::ConfigurationError);
     }
 
     if (autoconnect) {
@@ -252,7 +240,7 @@ void Mokosh::begin(String prefix, bool autoconnect) {
             this->hello();
         } else {
             if (!this->isIgnoringConnectionErrors) {
-                this->error(Mokosh::Error_WIFI);
+                this->error(MokoshErrors::CannotConnectToWifi);
             } else {
                 mdebugD("Wi-Fi connection error, ignored.");
             }
@@ -289,7 +277,7 @@ bool Mokosh::reconnect() {
             if (this->isIgnoringConnectionErrors) {
                 mdebugE("Failed to reconnect to Wi-Fi");
             } else {
-                this->error(Mokosh::Error_WIFI);
+                this->error(MokoshErrors::CannotConnectToWifi);
             }
         }
     }
@@ -300,8 +288,8 @@ bool Mokosh::reconnect() {
         trials++;
 
         String clientId = this->hostName;
-        if (this->hasConfigKey(Mokosh::config_client_id.c_str()))
-            clientId = this->readConfigString(Mokosh::config_client_id.c_str(), this->hostName);
+        if (this->config.hasConfigKey(this->config.config_client_id.c_str()))
+            clientId = this->config.readConfigString(this->config.config_client_id.c_str(), this->hostName);
 
         if (this->mqtt->connect(clientId.c_str())) {
             mdebugI("MQTT reconnected");
@@ -337,10 +325,6 @@ PubSubClient* Mokosh::getPubSubClient() {
     return this->mqtt;
 }
 
-bool Mokosh::isConfigurationSet() {
-    return this->readConfigString("ssid") != "";
-}
-
 bool Mokosh::isWifiConnected() {
     return WiFi.status() == WL_CONNECTED;
 }
@@ -363,8 +347,8 @@ wl_status_t Mokosh::connectWifi() {
     WiFi.setHostname(fullHostName);
 #endif
 
-    String ssid = readConfigString(config_ssid.c_str(), "");
-    String password = readConfigString(config_wifi_password.c_str());
+    String ssid = this->config.readConfigString(this->config.config_ssid.c_str(), "");
+    String password = this->config.readConfigString(this->config.config_wifi_password.c_str());
 
     if (ssid == "") {
         mdebugE("Configured ssid is empty, cannot connect to Wi-Fi");
@@ -400,16 +384,6 @@ wl_status_t Mokosh::connectWifi() {
 
 Mokosh* Mokosh::getInstance() {
     return _instance;
-}
-
-bool Mokosh::configFileExists() {
-    File configFile = LittleFS.open("/config.json", "r");
-
-    if (!configFile) {
-        return false;
-    } else {
-        return true;
-    }
 }
 
 void Mokosh::setDebugLevel(DebugLevel level) {
@@ -450,82 +424,8 @@ void Mokosh::loop() {
     ArduinoOTA.handle();
 }
 
-String Mokosh::readConfigString(const char* field, String def) {
-    if (!this->config.containsKey(field)) {
-        mdebugW("config.json field %s does not exist!", field);
-        return def;
-    }
-
-    const char* data = this->config[field];
-    return String(data);
-}
-
-int Mokosh::readConfigInt(const char* field, int def) {
-    if (!this->config.containsKey(field)) {
-        mdebugW("config.json field %s does not exist!", field);
-        return def;
-    }
-
-    int data = this->config[field];
-    return data;
-}
-
-float Mokosh::readConfigFloat(const char* field, float def) {
-    if (!this->config.containsKey(field)) {
-        mdebugW("config.json field %s does not exist!", field);
-        return def;
-    }
-
-    float data = this->config[field];
-    return data;
-}
-
-void Mokosh::setConfig(const char* field, String value) {
-    this->config[field] = value;
-}
-
-void Mokosh::setConfig(const char* field, int value) {
-    this->config[field] = value;
-}
-
-void Mokosh::setConfig(const char* field, float value) {
-    this->config[field] = value;
-}
-
-void Mokosh::saveConfig() {
-    mdebugV("Saving config.json");
-    File configFile = LittleFS.open("/config.json", "w");
-    serializeJson(this->config, configFile);
-}
-
-bool Mokosh::reloadConfig() {
-    mdebugV("Reloading config.json");
-    File configFile = LittleFS.open("/config.json", "r");
-
-    if (!configFile) {
-        mdebugE("Cannot open config.json file");
-        return false;
-    }
-
-    size_t size = configFile.size();
-    if (size > 500) {
-        mdebugE("Config file too large");
-        return false;
-    }
-
-    deserializeJson(this->config, configFile);
-
-    return true;
-}
-
-bool Mokosh::hasConfigKey(const char* field) {
-    return this->config.containsKey(field);
-}
-
 void Mokosh::factoryReset() {
-    mdebugV("Removing config.json");
-    LittleFS.remove("/config.json");
-
+    this->config.removeConfigFile();
     ESP.restart();
 }
 
@@ -606,7 +506,7 @@ void Mokosh::mqttCommandReceived(char* topic, uint8_t* message, unsigned int len
     }
 
     if (strcmp(msg, "reloadconfig") == 0) {
-        this->reloadConfig();
+        this->config.reloadConfig();
 
         return;
     }
@@ -621,13 +521,13 @@ void Mokosh::mqttCommandReceived(char* topic, uint8_t* message, unsigned int len
         }
 
         if (msg2 == "saveconfig") {
-            this->saveConfig();
+            this->config.saveConfig();
             return;
         }
 
         if (msg2.startsWith("showconfigs=")) {
             String field = msg2.substring(12);
-            String value = this->readConfigString(field.c_str());
+            String value = this->config.readConfigString(field.c_str());
 
             this->publish(debug_response_topic.c_str(), value);
             return;
@@ -635,7 +535,7 @@ void Mokosh::mqttCommandReceived(char* topic, uint8_t* message, unsigned int len
 
         if (msg2.startsWith("showconfigi=")) {
             String field = msg2.substring(12);
-            int value = this->readConfigInt(field.c_str());
+            int value = this->config.readConfigInt(field.c_str());
 
             this->publish(debug_response_topic.c_str(), value);
             return;
@@ -643,7 +543,7 @@ void Mokosh::mqttCommandReceived(char* topic, uint8_t* message, unsigned int len
 
         if (msg2.startsWith("showconfigf=")) {
             String field = msg2.substring(12);
-            float value = this->readConfigFloat(field.c_str());
+            float value = this->config.readConfigFloat(field.c_str());
 
             this->publish(debug_response_topic.c_str(), value);
             return;
@@ -657,7 +557,7 @@ void Mokosh::mqttCommandReceived(char* topic, uint8_t* message, unsigned int len
 
             mdebugV("Setting configuration: field: %s, new value: %s", field.c_str(), value.c_str());
 
-            this->setConfig(field.c_str(), value);
+            this->config.setConfig(field.c_str(), value);
 
             return;
         }
@@ -670,7 +570,7 @@ void Mokosh::mqttCommandReceived(char* topic, uint8_t* message, unsigned int len
 
             mdebugV("Setting configuration: field: %s, new value: %d", field.c_str(), value.toInt());
 
-            this->setConfig(field.c_str(), (int)(value.toInt()));
+            this->config.setConfig(field.c_str(), (int)(value.toInt()));
 
             return;
         }
@@ -683,7 +583,7 @@ void Mokosh::mqttCommandReceived(char* topic, uint8_t* message, unsigned int len
 
             mdebugV("Setting configuration: field: %s, new value: %f", field.c_str(), value.toFloat());
 
-            this->setConfig(field.c_str(), value.toFloat());
+            this->config.setConfig(field.c_str(), value.toFloat());
 
             return;
         }
@@ -705,6 +605,7 @@ void Mokosh::onInterval(THandlerFunction func, unsigned long time, String name) 
     mdebugV("Registering interval function %s on time %ld", name.c_str(), time);
 
     IntervalEvent* first = NULL;
+    
     for (uint8_t i = 0; i < EVENTS_COUNT; i++) {
         if (events[i].interval == 0) {
             first = &events[i];
@@ -736,7 +637,7 @@ void Mokosh::publish(const char* subtopic, const char* payload, boolean retained
     if (this->client == nullptr) {
         mdebugE("Cannot publish, Client was not constructed!");
         return;
-    }    
+    }
 
     if (this->mqtt == nullptr) {
         mdebugE("Cannot publish, MQTT Client was not constructed!");

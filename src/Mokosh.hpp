@@ -1,13 +1,25 @@
+#if !defined(MOKOSH)
+
+#define MOKOSH
+
 #include <Arduino.h>
-#include <ArduinoJson.h>
 #if defined(ESP8266)
 #include <ESP8266WiFi.h>
+#include <LittleFS.h>
 #endif
+
+#if defined(ESP32)
+#include <ESPmDNS.h>
+#include <SPIFFS.h>
+#define LittleFS SPIFFS
+#endif
+
 #include <ArduinoOTA.h>
 #include <PubSubClient.h>
 #include <RemoteDebug.h>
 
 #include "MokoshHandlers.hpp"
+#include "MokoshConfig.hpp"
 
 // Debug level - starts from 0 to 6, higher is more severe
 typedef enum DebugLevel {
@@ -38,6 +50,23 @@ typedef struct IntervalEvent {
 #define mdebugD(fmt, ...) Mokosh::debug(DebugLevel::DEBUG, __func__, fmt, ##__VA_ARGS__)
 #define mdebugV(fmt, ...) Mokosh::debug(DebugLevel::VERBOSE, __func__, fmt, ##__VA_ARGS__)
 #define mdebugW(fmt, ...) Mokosh::debug(DebugLevel::WARNING, __func__, fmt, ##__VA_ARGS__)
+
+class MokoshErrors {
+   public:
+    // error code thrown when config.json file cannot be read properly
+    static const uint8_t ConfigurationError = 1;
+
+    // error code thrown when LittleFS is not available
+    static const uint8_t FileSystemNotAvailable = 2;
+
+    // error code thrown when couldn't connect to Wi-Fi
+    static const uint8_t CannotConnectToWifi = 3;
+
+    // error code thrown when MQTT broker connection fails
+    static const uint8_t MqttConnectionFailed = 5;
+};
+
+
 
 // the main class for the framework, must be initialized in your code
 class Mokosh {
@@ -123,18 +152,6 @@ class Mokosh {
     // removes config.json and reboots, entering FirstRun mode
     void factoryReset();
 
-    // error code thrown when config.json file cannot be read properly
-    const uint8_t Error_CONFIG = 1;
-
-    // error code thrown when LittleFS is not available
-    const uint8_t Error_FS = 2;
-
-    // error code thrown when couldn't connect to Wi-Fi
-    const uint8_t Error_WIFI = 3;
-
-    // error code thrown when MQTT broker connection fails
-    const uint8_t Error_MQTT = 5;
-
     // the name of subtopic used for commands
     const String cmd_topic = "cmd";
 
@@ -152,41 +169,6 @@ class Mokosh {
 
     // the name of subtopic used for heartbeat messages
     const String heartbeat_topic = "debug/heartbeat";
-
-    const String config_broker = "broker";
-    const String config_broker_port = "brokerPort";
-    const String config_ota_port = "otaPort";
-    const String config_ota_password = "otaPasswordHash";
-    const String config_ssid = "ssid";
-    const String config_wifi_password = "password";
-    const String config_client_id = "mqttClientId";
-
-    // reads a given string field from config.json
-    String readConfigString(const char* field, String def = "");
-
-    // reads a given int field from config.json
-    int readConfigInt(const char* field, int def = 0);
-
-    // reads a given float field from config.json
-    float readConfigFloat(const char* field, float def = 0);
-
-    // sets a configuration field to a given value
-    void setConfig(const char* field, String value);
-
-    // sets a configuration field to a given value
-    void setConfig(const char* field, int value);
-
-    // sets a configuration field to a given value
-    void setConfig(const char* field, float value);
-
-    // saves configuration to a config.json file
-    void saveConfig();
-
-    // reads configuration from a config.json file
-    bool reloadConfig();
-
-    // checks if the key exists in configuration
-    bool hasConfigKey(const char* field);
 
     void mqttCommandReceived(char* topic, uint8_t* message, unsigned int length);
 
@@ -239,12 +221,12 @@ class Mokosh {
     bool debugReady;
     String hostName;
     char hostNameC[32];
-    String prefix;    
+    String prefix;
     IntervalEvent events[EVENTS_COUNT];
     String version = "1.0.0";
     String buildDate = "1970-01-01";
 
-    StaticJsonDocument<500> config;
+    MokoshConfig config;
 
     Client* client;
     PubSubClient* mqtt;
@@ -271,3 +253,5 @@ class Mokosh {
 
     char ssid[16] = {0};
 };
+
+#endif
