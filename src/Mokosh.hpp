@@ -159,6 +159,7 @@ class Mokosh {
     const String config_ota_password = "otaPasswordHash";
     const String config_ssid = "ssid";
     const String config_wifi_password = "password";
+    const String config_client_id = "mqttClientId";
 
     // reads a given string field from config.json
     String readConfigString(const char* field, String def = "");
@@ -183,6 +184,9 @@ class Mokosh {
 
     // reads configuration from a config.json file
     bool reloadConfig();
+
+    // checks if the key exists in configuration
+    bool hasConfigKey(const char* field);
 
     void mqttCommandReceived(char* topic, uint8_t* message, unsigned int length);
 
@@ -226,6 +230,11 @@ class Mokosh {
     // is being automatically run on begin() if autoconnect is true
     void setupRemoteDebug();
 
+    // sets up communication using the custom Client instance (e.g. GSM)
+    // remember to use at least setupMqttClient() and hello() after using
+    // this, autoconnect should be disabled
+    void setupCustomClient(Client& client);
+
    private:
     bool debugReady;
     String hostName;
@@ -237,13 +246,14 @@ class Mokosh {
 
     StaticJsonDocument<500> config;
 
-    WiFiClient* client;
+    Client* client;
     PubSubClient* mqtt;
 
     bool isFSEnabled = true;
     bool isRebootOnError = false;
     bool isOTAEnabled = false;
     bool isOTAInProgress = false;
+    bool isMqttConfigured = false;
     bool isIgnoringConnectionErrors = false;
     bool isForceWifiReconnect = false;
     wl_status_t lastWifiStatus;

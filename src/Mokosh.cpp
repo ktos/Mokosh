@@ -80,7 +80,9 @@ bool Mokosh::configureMqttClient() {
     uint16_t brokerPort = this->readConfigInt(Mokosh::config_broker_port.c_str(), 1883);
 
     this->mqtt->setServer(broker, brokerPort);
-    mdebugD("MQTT broker set to %s port %d", broker.toString().c_str(), brokerPort);
+    mdebugD("MQTT broker set to %s port %d", broker.toString().c_str(), brokerPort);    
+
+    this->isMqttConfigured = true;
     return true;
 }
 
@@ -97,6 +99,10 @@ void Mokosh::setupWiFiClient() {
     mdebugI("IP: %s", WiFi.localIP().toString().c_str());
 
     this->client = new WiFiClient();
+}
+
+void Mokosh::setupCustomClient(Client& client) {
+    this->client = &client;
 }
 
 void Mokosh::setupMqttClient() {
@@ -292,7 +298,12 @@ bool Mokosh::reconnect() {
 
     while (!client->connected()) {
         trials++;
-        if (this->mqtt->connect(this->hostNameC)) {
+
+        String clientId = this->hostName;
+        if (this->hasConfigKey(Mokosh::config_client_id.c_str()))
+            clientId = this->readConfigString(Mokosh::config_client_id.c_str(), this->hostName);
+
+        if (this->mqtt->connect(clientId.c_str())) {
             mdebugI("MQTT reconnected");
 
             char cmd_topic[32];
@@ -505,6 +516,10 @@ bool Mokosh::reloadConfig() {
     deserializeJson(this->config, configFile);
 
     return true;
+}
+
+bool Mokosh::hasConfigKey(const char* field) {
+    return this->config.containsKey(field);
 }
 
 void Mokosh::factoryReset() {
@@ -721,15 +736,15 @@ void Mokosh::publish(const char* subtopic, const char* payload, boolean retained
     if (this->client == nullptr) {
         mdebugE("Cannot publish, Client was not constructed!");
         return;
-    }
-
-    if (!this->client->remoteIP().isSet()) {
-        mdebugE("Cannot publish, broker address is not configured");
-        return;
-    }
+    }    
 
     if (this->mqtt == nullptr) {
         mdebugE("Cannot publish, MQTT Client was not constructed!");
+        return;
+    }
+
+    if (!this->isMqttConfigured) {
+        mdebugE("Cannot publish, broker address is not configured");
         return;
     }
 
