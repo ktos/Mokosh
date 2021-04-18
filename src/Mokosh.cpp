@@ -360,7 +360,7 @@ wl_status_t Mokosh::connectWifi() {
         return wl_status_t::WL_NO_SSID_AVAIL;
     }
 
-    WiFi.begin(ssid, password);
+    WiFi.begin(ssid.c_str(), password.c_str());
 
     unsigned long startTime = millis();
     while (WiFi.status() != WL_CONNECTED && millis() - startTime < 10000) {
