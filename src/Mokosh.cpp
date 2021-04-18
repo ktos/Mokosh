@@ -41,8 +41,6 @@ Mokosh::Mokosh() {
     // initialize interval events table
     for (uint8_t i = 0; i < EVENTS_COUNT; i++)
         events[i].interval = 0;
-
-    //this->OTA = new MokoshOTAConfiguration();
 }
 
 void Mokosh::debug(DebugLevel level, const char* func, const char* fmt, ...) {
@@ -223,6 +221,11 @@ bool Mokosh::reconnect() {
         return true;
 
     uint8_t trials = 0;
+
+    if (!client->connected() && this->isIgnoringConnectionErrors) {
+        mdebugV("Client not connected, but ignoring.");
+        return false;
+    }
 
     while (!client->connected()) {
         trials++;
