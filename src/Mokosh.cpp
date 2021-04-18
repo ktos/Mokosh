@@ -107,6 +107,8 @@ void Mokosh::begin(String prefix) {
     sprintf(hostString, "%06X", ((uint32_t)ESP.getEfuseMac() << 8) >> 8);
 #endif
 
+    lastWifiStatus = WiFi.status();
+
     this->prefix = prefix;
     this->hostName = String(hostString);
     strcpy(this->hostNameC, hostName.c_str());
@@ -157,9 +159,9 @@ void Mokosh::begin(String prefix) {
         mdebugV("OTA is enabled. OTA port: %d", otaPort);
         ArduinoOTA.setPort(otaPort);
         ArduinoOTA.setHostname(this->hostNameC);
-        
+
         String hash = this->readConfigString(Mokosh::ota_password_field.c_str());
-        if (hash != "")        
+        if (hash != "")
             ArduinoOTA.setPasswordHash(hash.c_str());
 
         MokoshOTAHandlers moc = this->OtaHandlers;
@@ -218,7 +220,10 @@ void Mokosh::begin(String prefix) {
     mdebugV("Sending IP");
     this->publishIP();
 
-    this->onInterval(_heartbeat, HEARTBEAT);
+    this->onInterval([&]() {
+        publish(_instance->heartbeat_topic.c_str(), millis());
+    },
+                     HEARTBEAT, "HEARTBEAT");
 
     mdebugI("Starting operations...");
 }
@@ -308,7 +313,9 @@ bool Mokosh::connectWifi() {
     sprintf(fullHostName, "%s_%s", this->prefix.c_str(), this->hostNameC);
 #if defined(ESP8266)
     WiFi.hostname(fullHostName);
-#else
+#endif
+
+#if defined(ESP32)
     // workaround for https://github.com/espressif/arduino-esp32/issues/2537
     WiFi.config(INADDR_NONE, INADDR_NONE, INADDR_NONE);
     WiFi.setHostname(fullHostName);
@@ -330,7 +337,17 @@ bool Mokosh::connectWifi() {
         delay(250);
     }
 
-    bool status = WiFi.status() == WL_CONNECTED;
+    wl_status_t wifiStatus = WiFi.status();
+    if (wifiStatus != lastWifiStatus && wifiStatus == WL_CONNECTED) {
+        if (this->WiFiHandlers.onConnect != nullptr)
+            this->WiFiHandlers.onConnect();
+    } else if (wifiStatus != lastWifiStatus && wifiStatus == WL_CONNECT_FAILED) {
+        if (this->WiFiHandlers.onConnectFail != nullptr)
+            this->WiFiHandlers.onConnectFail();
+    }
+    lastWifiStatus = wifiStatus;
+
+    bool status = lastWifiStatus == WL_CONNECTED;
 
     if (status == true) {
         Serial.println(" ok");
@@ -369,10 +386,20 @@ void Mokosh::loop() {
     for (uint8_t i = 0; i < EVENTS_COUNT; i++) {
         if (events[i].interval != 0) {
             if (now - events[i].last > events[i].interval) {
-                mdebugV("Executing interval func %x on time %ld", (unsigned int)events[i].handler, events[i].interval);
+                mdebugV("Executing interval func %s on time %ld", events[i].name.c_str(), events[i].interval);
                 events[i].handler();
                 events[i].last = now;
             }
+        }
+    }
+
+    wl_status_t wifiStatus = WiFi.status();
+    if (wifiStatus != lastWifiStatus) {
+        lastWifiStatus = wifiStatus;
+
+        if (lastWifiStatus == WL_DISCONNECTED) {
+            if (this->WiFiHandlers.onDisconnect != nullptr)
+                this->WiFiHandlers.onDisconnect();
         }
     }
 
@@ -387,7 +414,7 @@ String Mokosh::readConfigString(const char* field, String def) {
         return def;
     }
 
-    const char* data = this->config[field];    
+    const char* data = this->config[field];
     return String(data);
 }
 
@@ -397,7 +424,7 @@ int Mokosh::readConfigInt(const char* field, int def) {
         return def;
     }
 
-    int data = this->config[field];    
+    int data = this->config[field];
     return data;
 }
 
@@ -407,19 +434,19 @@ float Mokosh::readConfigFloat(const char* field, float def) {
         return def;
     }
 
-    float data = this->config[field];    
+    float data = this->config[field];
     return data;
 }
 
-void Mokosh::setConfig(const char* field, String value) {    
+void Mokosh::setConfig(const char* field, String value) {
     this->config[field] = value;
 }
 
-void Mokosh::setConfig(const char* field, int value) {    
+void Mokosh::setConfig(const char* field, int value) {
     this->config[field] = value;
 }
 
-void Mokosh::setConfig(const char* field, float value) {    
+void Mokosh::setConfig(const char* field, float value) {
     this->config[field] = value;
 }
 
@@ -628,8 +655,8 @@ void Mokosh::mqttCommandReceived(char* topic, uint8_t* message, unsigned int len
     }
 }
 
-void Mokosh::onInterval(f_interval_t func, unsigned long time) {
-    mdebugV("Registering interval function %x on time %ld", (unsigned int)func, time);
+void Mokosh::onInterval(THandlerFunction func, unsigned long time, String name) {
+    mdebugV("Registering interval function %s on time %ld", name.c_str(), time);
 
     IntervalEvent* first = NULL;
     for (uint8_t i = 0; i < EVENTS_COUNT; i++) {
@@ -644,6 +671,7 @@ void Mokosh::onInterval(f_interval_t func, unsigned long time) {
     } else {
         first->handler = func;
         first->interval = time;
+        first->name = name;
     }
 }
 

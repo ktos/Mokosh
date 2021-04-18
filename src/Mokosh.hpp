@@ -7,7 +7,7 @@
 #include <PubSubClient.h>
 #include <RemoteDebug.h>
 
-#include "MokoshOTAHandlers.hpp"
+#include "MokoshHandlers.hpp"
 
 // handler for errors, used in onError
 using f_error_handler_t = void (*)(int);
@@ -30,9 +30,10 @@ typedef enum DebugLevel {
 } DebugLevel;
 
 typedef struct IntervalEvent {
+    String name;
     unsigned long interval;
     unsigned long last;
-    f_interval_t handler;
+    THandlerFunction handler;
 } IntervalEvent;
 
 #define EVENTS_COUNT 10
@@ -120,7 +121,7 @@ class Mokosh {
     // Mokosh will automatically fire the function when time (in milliseconds)
     // occurs since the last run
     // must be called before begin()
-    void onInterval(f_interval_t func, unsigned long time);
+    void onInterval(THandlerFunction func, unsigned long time, String name = "");
 
     // throws an error of a given code
     void error(int code);
@@ -194,8 +195,11 @@ class Mokosh {
 
     void mqttCommandReceived(char* topic, uint8_t* message, unsigned int length);
 
-    // property with all possible OTA handlers
+    // handlers for OTA situations (onStart, onEnd, etc.)
     MokoshOTAHandlers OtaHandlers;
+
+    // handlers for Wi-Fi situations (onConnect, onDisconnect)
+    MokoshWiFiHandlers WiFiHandlers;
 
     // sets ignoring connection errors - useful in example of deep sleep
     // so the device is going to sleep again if wifi networks/mqtt are not
@@ -234,6 +238,7 @@ class Mokosh {
     bool isOTAInProgress = false;
     bool isIgnoringConnectionErrors = false;
     bool isForceWifiReconnect = false;
+    wl_status_t lastWifiStatus;
 
     DebugLevel debugLevel = DebugLevel::WARNING;
 
