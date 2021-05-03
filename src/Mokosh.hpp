@@ -6,12 +6,14 @@
 #if defined(ESP8266)
 #include <ESP8266WiFi.h>
 #include <LittleFS.h>
+#include <ESP8266mDNS.h>
 #endif
 
 #if defined(ESP32)
 #include <ESPmDNS.h>
 #include <SPIFFS.h>
 #define LittleFS SPIFFS
+#include <ESPmDNS.h>
 #endif
 
 #include <ArduinoOTA.h>
@@ -85,6 +87,19 @@ class Mokosh {
     // responses to getv and getfullver commands and hello message
     // must be called before begin()
     Mokosh* setBuildMetadata(String version, String buildDate);
+
+    // enables MDNS service (default false, unless OTA is enabled)
+    Mokosh* setMDNS(bool value);
+
+    // sets up the MDNS responder -- ran automatically unless custom
+    // client is used
+    void setupMDNS();
+
+    // adds broadcasted MDNS service
+    void addMDNSService(const char* service, const char* proto, uint16_t port);
+
+    // adds broadcasted MDNS service props
+    void addMDNSServiceProps(const char* service, const char* proto, const char* property, const char* value);
 
     // publishes a new message on a Prefix_ABCDE/subtopic topic with
     // a given payload
@@ -188,7 +203,7 @@ class Mokosh {
     Mokosh* setForceWiFiReconnect(bool value);
 
     // sets if the heartbeat messages should be send    
-    Mokosh* setHeartbeatEnabled(bool value);
+    Mokosh* setHeartbeat(bool value);
 
     // returns if the RemoteDebug is ready
     bool isDebugReady();
@@ -238,6 +253,7 @@ class Mokosh {
     bool isFSEnabled = true;
     bool isRebootOnError = false;
     bool isOTAEnabled = false;
+    bool isMDNSEnabled = false;
     bool isOTAInProgress = false;
     bool isMqttConfigured = false;
     bool isIgnoringConnectionErrors = false;

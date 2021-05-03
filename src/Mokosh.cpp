@@ -112,6 +112,16 @@ void Mokosh::setupMqttClient() {
     }
 }
 
+void Mokosh::setupMDNS() {
+    if (!MDNS.begin(this->hostNameC)) {
+        mdebugE("MDNS couldn't be enabled");
+        return;
+    }
+
+    this->addMDNSService("mokosh", "tcp", 23);
+    this->addMDNSServiceProps("mokosh", "tcp", "version", this->version.c_str());
+}
+
 void Mokosh::setupOta() {
     uint16_t otaPort = 3232;
 #if defined(ESP8266)
@@ -242,6 +252,10 @@ void Mokosh::begin(String prefix, bool autoconnect) {
             this->setupWiFiClient();
             this->setupMqttClient();
 
+            if (this->isMDNSEnabled) {
+                this->setupMDNS();
+            }
+
             if (this->isOTAEnabled) {
                 this->setupOta();
             }
@@ -355,7 +369,7 @@ Mokosh* Mokosh::setForceWiFiReconnect(bool value) {
     return this;
 }
 
-Mokosh* Mokosh::setHeartbeatEnabled(bool value) {
+Mokosh* Mokosh::setHeartbeat(bool value) {
     this->isHeartbeatEnabled = value;
     return this;
 }
@@ -747,10 +761,27 @@ Mokosh* Mokosh::setBuildMetadata(String version, String buildDate) {
 
 Mokosh* Mokosh::setOta(bool value) {
     this->isOTAEnabled = value;
+
+    if (this->isOTAEnabled)
+        this->isMDNSEnabled = true;
+
     return this;
 }
 
 Mokosh* Mokosh::setIgnoreConnectionErrors(bool value) {
     this->isIgnoringConnectionErrors = value;
     return this;
+}
+
+Mokosh* Mokosh::setMDNS(bool value) {
+    this->isMDNSEnabled = value;
+    return this;
+}
+
+void Mokosh::addMDNSService(const char* service, const char* proto, uint16_t port) {
+    MDNS.addService(service, proto, port);
+}
+
+void Mokosh::addMDNSServiceProps(const char* service, const char* proto, const char* property, const char* value) {
+    MDNS.addServiceTxt(service, proto, property, value);
 }
