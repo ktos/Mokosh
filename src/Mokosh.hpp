@@ -111,20 +111,20 @@ class Mokosh {
     // use rather mdebug() macros instead
     static void debug(DebugLevel level, const char* func, const char* fmt, ...);
 
-    // enables ArduinoOTA subsystem
+    // enables ArduinoOTA subsystem (disabled by default)
     // must be called before begin()
-    void enableOTA();
+    void setOta(bool value);
 
-    // disables LittleFS and config.json support
+    // disables LittleFS and config.json support (enabled by default)
     // must be called before begin()
-    void disableLoadingConfigFile();
+    void setConfigFile(bool value);
 
-    // enables FirstRun subsystem if there is no config.json
-    void enableFirstRun();
+    // enables FirstRun subsystem if there is no config.json (disabled by default)
+    void setFirstRun(bool value);
 
     // enables automatic reboot on error - by default there will be
     // an inifinite loop instead
-    void enableRebootOnError();
+    void setRebootOnError(bool value);
 
     // defines callback to be run when command not handled by internal
     // means is received

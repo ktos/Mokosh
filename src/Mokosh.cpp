@@ -274,8 +274,8 @@ void Mokosh::publishIP() {
     }
 }
 
-void Mokosh::disableLoadingConfigFile() {
-    this->isFSEnabled = false;
+void Mokosh::setConfigFile(bool value) {
+    this->isFSEnabled = value;
 }
 
 bool Mokosh::reconnect() {
@@ -728,8 +728,8 @@ void Mokosh::error(int code) {
     }
 }
 
-void Mokosh::enableRebootOnError() {
-    this->isRebootOnError = true;
+void Mokosh::setRebootOnError(bool value) {
+    this->isRebootOnError = value;
 }
 
 void Mokosh::setBuildMetadata(String version, String buildDate) {
@@ -737,8 +737,8 @@ void Mokosh::setBuildMetadata(String version, String buildDate) {
     this->buildDate = buildDate;
 }
 
-void Mokosh::enableOTA() {
-    this->isOTAEnabled = true;
+void Mokosh::setOta(bool value) {
+    this->isOTAEnabled = value;
 }
 
 void Mokosh::setIgnoreConnectionErrors(bool value) {
