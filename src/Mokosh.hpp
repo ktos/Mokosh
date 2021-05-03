@@ -71,7 +71,7 @@ class Mokosh {
    public:
     Mokosh();
     // sets debug level verbosity, must be called before begin()
-    void setDebugLevel(DebugLevel level);
+    Mokosh* setDebugLevel(DebugLevel level);
 
     // starts Mokosh system, connects to the Wi-Fi and MQTT
     // using the provided device prefix
@@ -84,7 +84,7 @@ class Mokosh {
     // sets build information (SemVer and build date) used in the
     // responses to getv and getfullver commands and hello message
     // must be called before begin()
-    void setBuildMetadata(String version, String buildDate);
+    Mokosh* setBuildMetadata(String version, String buildDate);
 
     // publishes a new message on a Prefix_ABCDE/subtopic topic with
     // a given payload
@@ -113,18 +113,18 @@ class Mokosh {
 
     // enables ArduinoOTA subsystem (disabled by default)
     // must be called before begin()
-    void setOta(bool value);
+    Mokosh* setOta(bool value);
 
     // disables LittleFS and config.json support (enabled by default)
     // must be called before begin()
-    void setConfigFile(bool value);
+    Mokosh* setConfigFile(bool value);
 
     // enables FirstRun subsystem if there is no config.json (disabled by default)
-    void setFirstRun(bool value);
+    Mokosh* setFirstRun(bool value);
 
     // enables automatic reboot on error - by default there will be
     // an inifinite loop instead
-    void setRebootOnError(bool value);
+    Mokosh* setRebootOnError(bool value);
 
     // defines callback to be run when command not handled by internal
     // means is received
@@ -182,13 +182,13 @@ class Mokosh {
     // sets ignoring connection errors - useful in example of deep sleep
     // so the device is going to sleep again if wifi networks/mqtt are not
     // available
-    void setIgnoreConnectionErrors(bool value);
+    Mokosh* setIgnoreConnectionErrors(bool value);
 
     // sets if the Wi-Fi should be reconnected on MQTT reconnect if needed
-    void setForceWiFiReconnect(bool value);
+    Mokosh* setForceWiFiReconnect(bool value);
 
     // sets if the heartbeat messages should be send    
-    void setHeartbeatEnabled(bool value);
+    Mokosh* setHeartbeatEnabled(bool value);
 
     // returns if the RemoteDebug is ready
     bool isDebugReady();
@@ -219,7 +219,7 @@ class Mokosh {
     // sets up communication using the custom Client instance (e.g. GSM)
     // remember to use at least setupMqttClient() and hello() after using
     // this, autoconnect should be disabled
-    void setupCustomClient(Client& client);
+    Mokosh* setCustomClient(Client& client);
 
     // a configuration object to set and read configs
     MokoshConfig config;

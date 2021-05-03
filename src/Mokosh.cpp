@@ -96,8 +96,9 @@ void Mokosh::setupWiFiClient() {
     this->client = new WiFiClient();
 }
 
-void Mokosh::setupCustomClient(Client& client) {
+Mokosh* Mokosh::setCustomClient(Client& client) {
     this->client = &client;
+    return this;
 }
 
 void Mokosh::setupMqttClient() {
@@ -274,8 +275,9 @@ void Mokosh::publishIP() {
     }
 }
 
-void Mokosh::setConfigFile(bool value) {
+Mokosh* Mokosh::setConfigFile(bool value) {
     this->isFSEnabled = value;
+    return this;
 }
 
 bool Mokosh::reconnect() {
@@ -348,12 +350,14 @@ bool Mokosh::isWifiConnected() {
     return WiFi.status() == WL_CONNECTED;
 }
 
-void Mokosh::setForceWiFiReconnect(bool value) {
+Mokosh* Mokosh::setForceWiFiReconnect(bool value) {
     this->isForceWifiReconnect = value;
+    return this;
 }
 
-void Mokosh::setHeartbeatEnabled(bool value) {
+Mokosh* Mokosh::setHeartbeatEnabled(bool value) {
     this->isHeartbeatEnabled = value;
+    return this;
 }
 
 wl_status_t Mokosh::connectWifi() {
@@ -410,12 +414,14 @@ Mokosh* Mokosh::getInstance() {
     return _instance;
 }
 
-void Mokosh::setDebugLevel(DebugLevel level) {
+Mokosh* Mokosh::setDebugLevel(DebugLevel level) {
     this->debugLevel = level;
 
     if (this->debugReady) {
         mdebugW("Setting mdebug level should be before begin(), ignoring for internals.");
     }
+
+    return this;
 }
 
 void Mokosh::loop() {
@@ -728,19 +734,23 @@ void Mokosh::error(int code) {
     }
 }
 
-void Mokosh::setRebootOnError(bool value) {
+Mokosh* Mokosh::setRebootOnError(bool value) {
     this->isRebootOnError = value;
+    return this;
 }
 
-void Mokosh::setBuildMetadata(String version, String buildDate) {
+Mokosh* Mokosh::setBuildMetadata(String version, String buildDate) {
     this->version = version;
     this->buildDate = buildDate;
+    return this;
 }
 
-void Mokosh::setOta(bool value) {
+Mokosh* Mokosh::setOta(bool value) {
     this->isOTAEnabled = value;
+    return this;
 }
 
-void Mokosh::setIgnoreConnectionErrors(bool value) {
+Mokosh* Mokosh::setIgnoreConnectionErrors(bool value) {
     this->isIgnoringConnectionErrors = value;
+    return this;
 }
