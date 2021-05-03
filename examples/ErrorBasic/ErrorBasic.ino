@@ -4,7 +4,7 @@ Mokosh m;
 
 void setup() {
     // will automatically reboot if error is met
-    m.enableRebootOnError();
+    m.setRebootOnError();
     m.begin("Mokosh");    
 }
 
