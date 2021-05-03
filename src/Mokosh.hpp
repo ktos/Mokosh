@@ -238,6 +238,15 @@ class Mokosh {
 
     // a configuration object to set and read configs
     MokoshConfig config;
+
+    // returns defined device prefix
+    String getPrefix();
+
+    // returns automatically generated device hostname
+    String getHostName();
+
+    // gets prefix for MQTT topics for the current device
+    String getMqttPrefix();
    private:
     bool debugReady;
     String hostName;

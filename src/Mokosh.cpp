@@ -785,3 +785,16 @@ void Mokosh::addMDNSService(const char* service, const char* proto, uint16_t por
 void Mokosh::addMDNSServiceProps(const char* service, const char* proto, const char* property, const char* value) {
     MDNS.addServiceTxt(service, proto, property, value);
 }
+
+String Mokosh::getPrefix() {
+    return this->prefix;
+}
+
+String Mokosh::getHostName() {
+    return this->hostName;
+}
+
+String Mokosh::getMqttPrefix() {
+    String result = this->prefix + "_" + this->hostName + "/";
+    return result;
+}
