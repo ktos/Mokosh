@@ -9,7 +9,7 @@ void setup() {
     // static configuration to be used: Wifi with yourssid and yourpassword password
     // mqtt broker at 192.168.1.10, port 1883
 
-    mokosh.disableLoadingConfigFile();
+    mokosh.setConfigFile(false);
     mokosh.config.set(mokosh.config.key_ssid, "yourssid");
     mokosh.config.set(mokosh.config.key_wifi_password, "yourpassword");
     mokosh.config.set(mokosh.config.key_broker, "192.168.1.10");

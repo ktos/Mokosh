@@ -96,8 +96,9 @@ void Mokosh::setupWiFiClient() {
     this->client = new WiFiClient();
 }
 
-void Mokosh::setupCustomClient(Client& client) {
+Mokosh* Mokosh::setCustomClient(Client& client) {
     this->client = &client;
+    return this;
 }
 
 void Mokosh::setupMqttClient() {
@@ -109,6 +110,16 @@ void Mokosh::setupMqttClient() {
                 this->error(MokoshErrors::MqttConnectionFailed);
         }
     }
+}
+
+void Mokosh::setupMDNS() {
+    if (!MDNS.begin(this->hostNameC)) {
+        mdebugE("MDNS couldn't be enabled");
+        return;
+    }
+
+    this->addMDNSService("mokosh", "tcp", 23);
+    this->addMDNSServiceProps("mokosh", "tcp", "version", this->version.c_str());
 }
 
 void Mokosh::setupOta() {
@@ -241,6 +252,10 @@ void Mokosh::begin(String prefix, bool autoconnect) {
             this->setupWiFiClient();
             this->setupMqttClient();
 
+            if (this->isMDNSEnabled) {
+                this->setupMDNS();
+            }
+
             if (this->isOTAEnabled) {
                 this->setupOta();
             }
@@ -274,8 +289,9 @@ void Mokosh::publishIP() {
     }
 }
 
-void Mokosh::disableLoadingConfigFile() {
-    this->isFSEnabled = false;
+Mokosh* Mokosh::setConfigFile(bool value) {
+    this->isFSEnabled = value;
+    return this;
 }
 
 bool Mokosh::reconnect() {
@@ -348,12 +364,14 @@ bool Mokosh::isWifiConnected() {
     return WiFi.status() == WL_CONNECTED;
 }
 
-void Mokosh::setForceWiFiReconnect(bool value) {
+Mokosh* Mokosh::setForceWiFiReconnect(bool value) {
     this->isForceWifiReconnect = value;
+    return this;
 }
 
-void Mokosh::setHeartbeatEnabled(bool value) {
+Mokosh* Mokosh::setHeartbeat(bool value) {
     this->isHeartbeatEnabled = value;
+    return this;
 }
 
 wl_status_t Mokosh::connectWifi() {
@@ -410,12 +428,14 @@ Mokosh* Mokosh::getInstance() {
     return _instance;
 }
 
-void Mokosh::setDebugLevel(DebugLevel level) {
+Mokosh* Mokosh::setDebugLevel(DebugLevel level) {
     this->debugLevel = level;
 
     if (this->debugReady) {
         mdebugW("Setting mdebug level should be before begin(), ignoring for internals.");
     }
+
+    return this;
 }
 
 void Mokosh::loop() {
@@ -728,19 +748,53 @@ void Mokosh::error(int code) {
     }
 }
 
-void Mokosh::enableRebootOnError() {
-    this->isRebootOnError = true;
+Mokosh* Mokosh::setRebootOnError(bool value) {
+    this->isRebootOnError = value;
+    return this;
 }
 
-void Mokosh::setBuildMetadata(String version, String buildDate) {
+Mokosh* Mokosh::setBuildMetadata(String version, String buildDate) {
     this->version = version;
     this->buildDate = buildDate;
+    return this;
 }
 
-void Mokosh::enableOTA() {
-    this->isOTAEnabled = true;
+Mokosh* Mokosh::setOta(bool value) {
+    this->isOTAEnabled = value;
+
+    if (this->isOTAEnabled)
+        this->isMDNSEnabled = true;
+
+    return this;
 }
 
-void Mokosh::setIgnoreConnectionErrors(bool value) {
+Mokosh* Mokosh::setIgnoreConnectionErrors(bool value) {
     this->isIgnoringConnectionErrors = value;
+    return this;
+}
+
+Mokosh* Mokosh::setMDNS(bool value) {
+    this->isMDNSEnabled = value;
+    return this;
+}
+
+void Mokosh::addMDNSService(const char* service, const char* proto, uint16_t port) {
+    MDNS.addService(service, proto, port);
+}
+
+void Mokosh::addMDNSServiceProps(const char* service, const char* proto, const char* property, const char* value) {
+    MDNS.addServiceTxt(service, proto, property, value);
+}
+
+String Mokosh::getPrefix() {
+    return this->prefix;
+}
+
+String Mokosh::getHostName() {
+    return this->hostName;
+}
+
+String Mokosh::getMqttPrefix() {
+    String result = this->prefix + "_" + this->hostName + "/";
+    return result;
 }
