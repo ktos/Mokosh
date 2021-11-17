@@ -247,6 +247,9 @@ class Mokosh {
 
     // gets prefix for MQTT topics for the current device
     String getMqttPrefix();
+
+    // connects to Wi-Fi, manually
+    wl_status_t connectWifi();
    private:
     bool debugReady;
     String hostName;
@@ -274,8 +277,7 @@ class Mokosh {
     DebugLevel debugLevel = DebugLevel::WARNING;
 
     bool configFileExists();
-    bool isConfigurationSet();
-    wl_status_t connectWifi();
+    bool isConfigurationSet();    
     bool configureMqttClient();
     bool reconnect();
 
