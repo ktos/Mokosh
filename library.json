@@ -22,11 +22,11 @@
     "dependencies": [
         {
             "name": "ArduinoJson",
-            "version": "~6.17.2"
+            "version": "~6.19.2"
         },
         {
-            "name": "ktos-RemoteDebug",
-            "version": "https://github.com/ktos/RemoteDebug#v3.0.6"
+            "name": "ktos/ktos-RemoteDebug",
+            "version": "~3.0.6"
         },
         {
             "name": "PubSubClient",
