@@ -13,7 +13,7 @@
             "maintainer": true
         }
     ],
-    "version": "0.6.0",
+    "version": "0.6.1",
     "frameworks": "arduino",
     "platforms": [
         "espressif8266",
@@ -25,8 +25,8 @@
             "version": "~6.17.2"
         },
         {
-            "name": "RemoteDebug",
-            "version": "~3.0.5"
+            "name": "ktos/RemoteDebug",
+            "version": "https://github.com/ktos/RemoteDebug#v3.0.6"
         },
         {
             "name": "PubSubClient",
