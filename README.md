@@ -30,6 +30,6 @@ Then you can just start using Mokosh object.
 ### Dependencies
 The framework is dependent on the following libraries:
 
-* [ArduinoJson](https://github.com/bblanchon/ArduinoJson), 6.17.2,
-* [RemoteDebug](https://github.com/JoaoLopesF/RemoteDebug), 3.0.5,
+* [ArduinoJson](https://github.com/bblanchon/ArduinoJson), 6.19.2,
+* [RemoteDebug](https://github.com/ktos/RemoteDebug), (my fork) 3.0.6,
 * [PubSubClient](https://github.com/knolleary/pubsubclient), 2.7.0.
