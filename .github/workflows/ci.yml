@@ -34,7 +34,7 @@ jobs:
         pip install --upgrade platformio
 
     - name: Install library dependencies
-      run: pio lib -g install ArduinoJson@~6.17.2 ktos/ktos-RemoteDebug@~3.0.6 PubSubClient@2.7.0
+      run: pio lib -g install ArduinoJson@~6.17.2 ktos/KtosRemoteDebug@~3.0.6 PubSubClient@2.7.0
 
     - name: Run PlatformIO
       run: pio ci --lib="." --board=nodemcuv2 --board=esp-wrover-kit

@@ -25,7 +25,7 @@
             "version": "~6.19.2"
         },
         {
-            "name": "ktos/ktos-RemoteDebug",
+            "name": "ktos/KtosRemoteDebug",
             "version": "~3.0.6"
         },
         {
