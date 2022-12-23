@@ -11,9 +11,7 @@
 
 #if defined(ESP32)
 #include <ESPmDNS.h>
-#include <SPIFFS.h>
-#define LittleFS SPIFFS
-#include <ESPmDNS.h>
+#include <LittleFS.h>
 #endif
 
 #include <ArduinoOTA.h>
@@ -24,7 +22,8 @@
 #include "MokoshHandlers.hpp"
 
 // Debug level - starts from 0 to 6, higher is more severe
-typedef enum DebugLevel {
+typedef enum DebugLevel
+{
     PROFILER = 0,
     VERBOSE = 1,
     DEBUG = 2,
@@ -34,7 +33,8 @@ typedef enum DebugLevel {
     ANY = 6
 } DebugLevel;
 
-typedef struct IntervalEvent {
+typedef struct IntervalEvent
+{
     String name;
     unsigned long interval;
     unsigned long last;
@@ -53,8 +53,9 @@ typedef struct IntervalEvent {
 #define mdebugV(fmt, ...) Mokosh::debug(DebugLevel::VERBOSE, __func__, fmt, ##__VA_ARGS__)
 #define mdebugW(fmt, ...) Mokosh::debug(DebugLevel::WARNING, __func__, fmt, ##__VA_ARGS__)
 
-class MokoshErrors {
-   public:
+class MokoshErrors
+{
+public:
     // error code thrown when config.json file cannot be read properly
     static const uint8_t ConfigurationError = 1;
 
@@ -69,11 +70,12 @@ class MokoshErrors {
 };
 
 // the main class for the framework, must be initialized in your code
-class Mokosh {
-   public:
+class Mokosh
+{
+public:
     Mokosh();
     // sets debug level verbosity, must be called before begin()
-    Mokosh* setDebugLevel(DebugLevel level);
+    Mokosh *setDebugLevel(DebugLevel level);
 
     // starts Mokosh system, connects to the Wi-Fi and MQTT
     // using the provided device prefix
@@ -86,60 +88,60 @@ class Mokosh {
     // sets build information (SemVer and build date) used in the
     // responses to getv and getfullver commands and hello message
     // must be called before begin()
-    Mokosh* setBuildMetadata(String version, String buildDate);
+    Mokosh *setBuildMetadata(String version, String buildDate);
 
     // enables MDNS service (default false, unless OTA is enabled)
-    Mokosh* setMDNS(bool value);
+    Mokosh *setMDNS(bool value);
 
     // sets up the MDNS responder -- ran automatically unless custom
     // client is used
     void setupMDNS();
 
     // adds broadcasted MDNS service
-    void addMDNSService(const char* service, const char* proto, uint16_t port);
+    void addMDNSService(const char *service, const char *proto, uint16_t port);
 
     // adds broadcasted MDNS service props
-    void addMDNSServiceProps(const char* service, const char* proto, const char* property, const char* value);
+    void addMDNSServiceProps(const char *service, const char *proto, const char *property, const char *value);
 
     // publishes a new message on a Prefix_ABCDE/subtopic topic with
     // a given payload
-    void publish(const char* subtopic, String payload);
+    void publish(const char *subtopic, String payload);
 
     // publishes a new message on a Prefix_ABCDE/subtopic topic with
     // a given payload
-    void publish(const char* subtopic, const char* payload);
+    void publish(const char *subtopic, const char *payload);
 
     // publishes a new message on a Prefix_ABCDE/subtopic topic with
     // a given payload, allows to specify if payload should be retained
-    void publish(const char* subtopic, const char* payload, boolean retained);
+    void publish(const char *subtopic, const char *payload, boolean retained);
 
     // publishes a new message on a Prefix_ABCDE/subtopic topic with
     // a given payload
-    void publish(const char* subtopic, float payload);
+    void publish(const char *subtopic, float payload);
 
     // returns internal PubSubClient instance
-    PubSubClient* getPubSubClient();
+    PubSubClient *getPubSubClient();
 
     // prints message of a desired debug level to RemoteDebug
     // uses func parameter to be used with __func__ so there will
     // be printed in what function debug happened
     // use rather mdebug() macros instead
-    static void debug(DebugLevel level, const char* func, const char* fmt, ...);
+    static void debug(DebugLevel level, const char *func, const char *fmt, ...);
 
     // enables ArduinoOTA subsystem (disabled by default)
     // must be called before begin()
-    Mokosh* setOta(bool value);
+    Mokosh *setOta(bool value);
 
     // disables LittleFS and config.json support (enabled by default)
     // must be called before begin()
-    Mokosh* setConfigFile(bool value);
+    Mokosh *setConfigFile(bool value);
 
     // enables FirstRun subsystem if there is no config.json (disabled by default)
-    Mokosh* setFirstRun(bool value);
+    Mokosh *setFirstRun(bool value);
 
     // enables automatic reboot on error - by default there will be
     // an inifinite loop instead
-    Mokosh* setRebootOnError(bool value);
+    Mokosh *setRebootOnError(bool value);
 
     // defines callback to be run when command not handled by internal
     // means is received
@@ -160,30 +162,30 @@ class Mokosh {
     void error(int code);
 
     // returns instance of Mokosh singleton
-    static Mokosh* getInstance();
+    static Mokosh *getInstance();
 
     // removes config.json and reboots, entering FirstRun mode
     void factoryReset();
 
     // the name of subtopic used for commands
-    const char* cmd_topic = "cmd";
+    const char *cmd_topic = "cmd";
 
     // the name of subtopic used for version hello message
-    const char* version_topic = "version";
+    const char *version_topic = "version";
 
     // the name of subtopic used for debug purposes
-    const char* debug_topic = "debug";
+    const char *debug_topic = "debug";
 
     // the name of subtopic used for hello packet with IP
-    const char* debug_ip_topic = "debug/ip";
+    const char *debug_ip_topic = "debug/ip";
 
     // the name of subtopic used as generic response to commands
-    const char* debug_response_topic = "debug/cmdresp";
+    const char *debug_response_topic = "debug/cmdresp";
 
     // the name of subtopic used for heartbeat messages
-    const char* heartbeat_topic = "debug/heartbeat";
+    const char *heartbeat_topic = "debug/heartbeat";
 
-    void mqttCommandReceived(char* topic, uint8_t* message, unsigned int length);
+    void mqttCommandReceived(char *topic, uint8_t *message, unsigned int length);
 
     // event handlers for OTA situations (onStart, onEnd, etc.)
     MokoshOTAHandlers otaEvents;
@@ -197,13 +199,13 @@ class Mokosh {
     // sets ignoring connection errors - useful in example of deep sleep
     // so the device is going to sleep again if wifi networks/mqtt are not
     // available
-    Mokosh* setIgnoreConnectionErrors(bool value);
+    Mokosh *setIgnoreConnectionErrors(bool value);
 
     // sets if the Wi-Fi should be reconnected on MQTT reconnect if needed
-    Mokosh* setForceWiFiReconnect(bool value);
+    Mokosh *setForceWiFiReconnect(bool value);
 
-    // sets if the heartbeat messages should be send    
-    Mokosh* setHeartbeat(bool value);
+    // sets if the heartbeat messages should be send
+    Mokosh *setHeartbeat(bool value);
 
     // returns if the RemoteDebug is ready
     bool isDebugReady();
@@ -234,7 +236,7 @@ class Mokosh {
     // sets up communication using the custom Client instance (e.g. GSM)
     // remember to use at least setupMqttClient() and hello() after using
     // this, autoconnect should be disabled
-    Mokosh* setCustomClient(Client& client);
+    Mokosh *setCustomClient(Client &client);
 
     // a configuration object to set and read configs
     MokoshConfig config;
@@ -250,17 +252,18 @@ class Mokosh {
 
     // connects to Wi-Fi, manually
     wl_status_t connectWifi();
-   private:
+
+private:
     bool debugReady;
     String hostName;
     char hostNameC[32];
     String prefix;
     IntervalEvent intervalEvents[EVENTS_COUNT];
     String version = "1.0.0";
-    String buildDate = "1970-01-01";    
+    String buildDate = "1970-01-01";
 
-    Client* client;
-    PubSubClient* mqtt;
+    Client *client;
+    PubSubClient *mqtt;
 
     bool isFSEnabled = true;
     bool isRebootOnError = false;
@@ -277,7 +280,7 @@ class Mokosh {
     DebugLevel debugLevel = DebugLevel::WARNING;
 
     bool configFileExists();
-    bool isConfigurationSet();    
+    bool isConfigurationSet();
     bool configureMqttClient();
     bool reconnect();
 
