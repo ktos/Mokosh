@@ -335,7 +335,7 @@ void Mokosh::publishIP()
         snprintf(msg, sizeof(msg) - 1, "{\"ipaddress\": \"%s\"}", ipbuf);
 
         mdebugV("Sending IP");
-        this->publish(debug_ip_topic, msg);
+        this->publish(debug_ip_topic, msg, true);
     }
 }
 
