@@ -957,3 +957,8 @@ String Mokosh::getMqttPrefix()
     String result = this->prefix + "_" + this->hostName + "/";
     return result;
 }
+
+Client *Mokosh::getClient()
+{
+    return this->client;
+}

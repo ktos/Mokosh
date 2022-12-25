@@ -253,6 +253,9 @@ public:
     // connects to Wi-Fi, manually
     wl_status_t connectWifi();
 
+    // returns used Wi-Fi (or custom) client
+    Client *getClient();
+
 private:
     bool debugReady;
     String hostName;
