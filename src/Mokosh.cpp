@@ -19,7 +19,7 @@ Mokosh::Mokosh()
         this->intervalEvents[i].interval = 0;
 }
 
-void Mokosh::debug(DebugLevel level, const char *func, const char *fmt, ...)
+void Mokosh::debug(DebugLevel level, const char *func, const char *file, int line, const char *fmt, ...)
 {
     char dest[256];
     va_list argptr;
@@ -51,12 +51,12 @@ void Mokosh::debug(DebugLevel level, const char *func, const char *fmt, ...)
             lvl = 'A';
         }
 
-        Serial.printf("L (%c t:%ldms) (%s) %s\n", lvl, millis(), func, dest);
+        Serial.printf("L (%c t:%ldms) (%s %s:%d) %s\n", lvl, millis(), func, file, line, dest);
     }
 
     if (Debug.isActive((uint8_t)level))
     {
-        Debug.printf("(%s) %s\n", func, dest);
+        Debug.printf("(%s %s:%d) %s\n", func, file, line, dest);
     }
 }
 
@@ -264,6 +264,11 @@ void Mokosh::begin(String prefix, bool autoconnect)
 
     this->prefix = prefix;
     this->hostName = String(hostString);
+
+#ifdef OVERRIDE_HOSTNAME
+    this->hostName = OVERRIDE_HOSTNAME;
+#endif
+
     strcpy(this->hostNameC, hostName.c_str());
     mdebugD("ID: %s", hostString);
 

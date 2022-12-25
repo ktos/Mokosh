@@ -45,13 +45,13 @@ typedef struct IntervalEvent
 #define HEARTBEAT 10000
 #define MINUTES 60000
 
-#define mdebug(lvl, fmt, ...) Mokosh::debug(lvl, __func__, fmt, ##__VA_ARGS__)
-#define mdebugA(fmt, ...) Mokosh::debug(DebugLevel::ANY, __func__, fmt, ##__VA_ARGS__)
-#define mdebugE(fmt, ...) Mokosh::debug(DebugLevel::ERROR, __func__, fmt, ##__VA_ARGS__)
-#define mdebugI(fmt, ...) Mokosh::debug(DebugLevel::INFO, __func__, fmt, ##__VA_ARGS__)
-#define mdebugD(fmt, ...) Mokosh::debug(DebugLevel::DEBUG, __func__, fmt, ##__VA_ARGS__)
-#define mdebugV(fmt, ...) Mokosh::debug(DebugLevel::VERBOSE, __func__, fmt, ##__VA_ARGS__)
-#define mdebugW(fmt, ...) Mokosh::debug(DebugLevel::WARNING, __func__, fmt, ##__VA_ARGS__)
+#define mdebug(lvl, fmt, ...) Mokosh::debug(lvl, __func__, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
+#define mdebugA(fmt, ...) Mokosh::debug(DebugLevel::ANY, __func__, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
+#define mdebugE(fmt, ...) Mokosh::debug(DebugLevel::ERROR, __func__, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
+#define mdebugI(fmt, ...) Mokosh::debug(DebugLevel::INFO, __func__, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
+#define mdebugD(fmt, ...) Mokosh::debug(DebugLevel::DEBUG, __func__, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
+#define mdebugV(fmt, ...) Mokosh::debug(DebugLevel::VERBOSE, __func__, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
+#define mdebugW(fmt, ...) Mokosh::debug(DebugLevel::WARNING, __func__, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
 
 class MokoshErrors
 {
@@ -126,7 +126,7 @@ public:
     // uses func parameter to be used with __func__ so there will
     // be printed in what function debug happened
     // use rather mdebug() macros instead
-    static void debug(DebugLevel level, const char *func, const char *fmt, ...);
+    static void debug(DebugLevel level, const char *func, const char *file, int line, const char *fmt, ...);
 
     // enables ArduinoOTA subsystem (disabled by default)
     // must be called before begin()
