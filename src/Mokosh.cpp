@@ -142,7 +142,7 @@ void Mokosh::setupOta()
 {
     uint16_t otaPort = 3232;
 #if defined(ESP8266)
-    otaPort = this->config.getInt(this->config.key_ota_port, 8266);
+    otaPort = this->config.get<int>(this->config.key_ota_port, 8266);
 #endif
 
 #if defined(ESP32)
