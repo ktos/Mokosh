@@ -13,10 +13,6 @@ Mokosh::Mokosh()
 {
     _instance = this;
     Mokosh::debugReady = false;
-
-    // initialize interval events table
-    for (uint8_t i = 0; i < EVENTS_COUNT; i++)
-        this->intervalEvents[i].interval = 0;
 }
 
 void Mokosh::debug(DebugLevel level, const char *func, const char *file, int line, const char *fmt, ...)
@@ -218,6 +214,11 @@ void Mokosh::setupOta()
     ArduinoOTA.begin();
 }
 
+std::vector<std::shared_ptr<TickTwo>> Mokosh::getTickers()
+{
+    return tickers;
+}
+
 void Mokosh::hello()
 {
     mdebugI("Sending hello");
@@ -226,11 +227,20 @@ void Mokosh::hello()
 
     if (this->isHeartbeatEnabled)
     {
-        this->onInterval([&]()
-                         {
+        this->registerIntervalFunction([&]()
+                                       {
             if (this->isHeartbeatEnabled)
                 publish(_instance->heartbeat_topic, millis()); },
-                         HEARTBEAT, "MOKOSH_HEARTBEAT");
+                                       HEARTBEAT);
+    }
+}
+
+void Mokosh::initializeTickers()
+{
+    // starting all tickers
+    for (auto &ticker : tickers)
+    {
+        ticker->start();
     }
 }
 
@@ -320,6 +330,8 @@ void Mokosh::begin(String prefix, bool autoconnect)
     {
         mdebugI("Auto network connection was disabled!");
     }
+
+    initializeTickers();
 
     mdebugI("Starting operations...");
 }
@@ -525,17 +537,10 @@ void Mokosh::loop()
 {
     unsigned long now = millis();
 
-    for (uint8_t i = 0; i < EVENTS_COUNT; i++)
+    // updating all registered tickers
+    for (auto &ticker : tickers)
     {
-        if (this->intervalEvents[i].interval != 0)
-        {
-            if (now - intervalEvents[i].last > intervalEvents[i].interval)
-            {
-                mdebugV("Executing interval func %s on time %ld", intervalEvents[i].name.c_str(), intervalEvents[i].interval);
-                intervalEvents[i].handler();
-                intervalEvents[i].last = now;
-            }
-        }
+        ticker->update();
     }
 
     wl_status_t wifiStatus = WiFi.status();
@@ -762,45 +767,11 @@ void Mokosh::mqttCommandReceived(char *topic, uint8_t *message, unsigned int len
     }
 }
 
-void Mokosh::onInterval(THandlerFunction func, unsigned long time, String name)
+void Mokosh::registerIntervalFunction(fptr func, unsigned long time)
 {
-    IntervalEvent *first = NULL;
-    for (uint8_t i = 0; i < EVENTS_COUNT; i++)
-    {
-        if (intervalEvents[i].name == name)
-        {
-            first = &intervalEvents[i];
-            break;
-        }
-    }
-
-    if (first == NULL)
-    {
-        mdebugV("Registering interval function %s on time %ld", name.c_str(), time);
-        for (uint8_t i = 0; i < EVENTS_COUNT; i++)
-        {
-            if (intervalEvents[i].interval == 0)
-            {
-                first = &intervalEvents[i];
-                break;
-            }
-        }
-    }
-    else
-    {
-        mdebugV("Overriding interval function %s on time %ld", name.c_str(), time);
-    }
-
-    if (first == NULL)
-    {
-        mdebugW("Interval function cannot be registered, no free space.");
-    }
-    else
-    {
-        first->handler = func;
-        first->interval = time;
-        first->name = name;
-    }
+    mdebugV("Registering interval function on time %ld", time);
+    std::shared_ptr<TickTwo> ticker = std::make_shared<TickTwo>(func, time, 0, MILLIS);
+    this->tickers.push_back(ticker);
 }
 
 void Mokosh::publish(const char *subtopic, String payload)

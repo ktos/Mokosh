@@ -17,6 +17,8 @@
 #include <ArduinoOTA.h>
 #include <PubSubClient.h>
 #include <RemoteDebug.h>
+#include <TickTwo.h>
+#include <vector>
 
 #include "MokoshConfig.hpp"
 #include "MokoshHandlers.hpp"
@@ -32,14 +34,6 @@ typedef enum DebugLevel
     ERROR = 5,
     ANY = 6
 } DebugLevel;
-
-typedef struct IntervalEvent
-{
-    String name;
-    unsigned long interval;
-    unsigned long last;
-    THandlerFunction handler;
-} IntervalEvent;
 
 #define EVENTS_COUNT 10
 #define HEARTBEAT 10000
@@ -156,7 +150,8 @@ public:
     // Mokosh will automatically fire the function when time (in milliseconds)
     // occurs since the last run
     // must be called before begin()
-    void onInterval(THandlerFunction func, unsigned long time, String name = "");
+    // you can also use TickTwo manually, by accessing vector tickers
+    void registerIntervalFunction(fptr func, unsigned long time);
 
     // throws an error of a given code
     void error(int code);
@@ -256,12 +251,17 @@ public:
     // returns used Wi-Fi (or custom) client
     Client *getClient();
 
+    // vector of tickers, functions run on the given interval
+    std::vector<std::shared_ptr<TickTwo>> getTickers();
+
+    // initialization of tickers, is called automatically by begin()
+    void initializeTickers();
+
 private:
     bool debugReady;
     String hostName;
     char hostNameC[32];
     String prefix;
-    IntervalEvent intervalEvents[EVENTS_COUNT];
     String version = "1.0.0";
     String buildDate = "1970-01-01";
 
@@ -291,6 +291,8 @@ private:
     void publishIP();
 
     char ssid[16] = {0};
+
+    std::vector<std::shared_ptr<TickTwo>> tickers;
 };
 
 #endif
