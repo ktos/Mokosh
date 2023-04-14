@@ -21,7 +21,7 @@
     ],
     "dependencies": [
         {
-            "name": "ArduinoJson",
+            "name": "bblanchon/ArduinoJson",
             "version": "~6.21.1"
         },
         {
@@ -29,7 +29,7 @@
             "version": "~3.0.7"
         },
         {
-            "name": "PubSubClient",
+            "name": "knolleary/PubSubClient",
             "version": "2.7.0"
         },
         {
