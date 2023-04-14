@@ -64,13 +64,13 @@ bool Mokosh::isDebugReady()
 bool Mokosh::configureMqttClient()
 {
     IPAddress broker;
-    String brokerAddress = this->config.getString(this->config.key_broker);
+    String brokerAddress = this->config.get<String>(this->config.key_broker);
     if (brokerAddress == "")
     {
         mdebugE("MQTT configuration is not provided!");
         return false;
     }
-    uint16_t brokerPort = this->config.getInt(this->config.key_broker_port, 1883);
+    uint16_t brokerPort = this->config.get<int>(this->config.key_broker_port, 1883);
 
     // it it is an IP address
     if (broker.fromString(brokerAddress))
@@ -146,14 +146,14 @@ void Mokosh::setupOta()
 #endif
 
 #if defined(ESP32)
-    otaPort = this->config.getInt(this->config.key_ota_port, 3232);
+    otaPort = this->config.get<int>(this->config.key_ota_port, 3232);
 #endif
 
     mdebugV("OTA is enabled. OTA port: %d", otaPort);
     ArduinoOTA.setPort(otaPort);
     ArduinoOTA.setHostname(this->hostNameC);
 
-    String hash = this->config.getString(this->config.key_ota_password);
+    String hash = this->config.get<String>(this->config.key_ota_password);
     if (hash != "")
         ArduinoOTA.setPasswordHash(hash.c_str());
 
@@ -398,7 +398,7 @@ bool Mokosh::reconnect()
 
         String clientId = this->hostName;
         if (this->config.hasKey(this->config.key_client_id))
-            clientId = this->config.getString(this->config.key_client_id, this->hostName);
+            clientId = this->config.get<String>(this->config.key_client_id, this->hostName);
 
         if (this->mqtt->connect(clientId.c_str()))
         {
@@ -472,8 +472,8 @@ wl_status_t Mokosh::connectWifi()
     WiFi.setHostname(fullHostName);
 #endif
 
-    String ssid = this->config.getString(this->config.key_ssid, "");
-    String password = this->config.getString(this->config.key_wifi_password);
+    String ssid = this->config.get<String>(this->config.key_ssid, "");
+    String password = this->config.get<String>(this->config.key_wifi_password);
 
     if (ssid == "")
     {
@@ -686,7 +686,7 @@ void Mokosh::mqttCommandReceived(char *topic, uint8_t *message, unsigned int len
         if (msg2.startsWith("showconfigs="))
         {
             String field = msg2.substring(12);
-            String value = this->config.getString(field.c_str());
+            String value = this->config.get<String>(field.c_str());
 
             this->publish(debug_response_topic, value);
             return;
@@ -695,7 +695,7 @@ void Mokosh::mqttCommandReceived(char *topic, uint8_t *message, unsigned int len
         if (msg2.startsWith("showconfigi="))
         {
             String field = msg2.substring(12);
-            int value = this->config.getInt(field.c_str());
+            int value = this->config.get<int>(field.c_str());
 
             this->publish(debug_response_topic, value);
             return;
@@ -704,7 +704,7 @@ void Mokosh::mqttCommandReceived(char *topic, uint8_t *message, unsigned int len
         if (msg2.startsWith("showconfigf="))
         {
             String field = msg2.substring(12);
-            float value = this->config.getFloat(field.c_str());
+            float value = this->config.get<float>(field.c_str());
 
             this->publish(debug_response_topic, value);
             return;
