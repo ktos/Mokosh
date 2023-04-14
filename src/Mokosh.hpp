@@ -47,20 +47,19 @@ typedef enum DebugLevel
 #define mdebugV(fmt, ...) Mokosh::debug(DebugLevel::VERBOSE, __func__, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
 #define mdebugW(fmt, ...) Mokosh::debug(DebugLevel::WARNING, __func__, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
 
-class MokoshErrors
+enum MokoshErrors
 {
-public:
     // error code thrown when config.json file cannot be read properly
-    static const uint8_t ConfigurationError = 1;
+    ConfigurationError = 1,
 
     // error code thrown when LittleFS is not available
-    static const uint8_t FileSystemNotAvailable = 2;
+    FileSystemNotAvailable = 2,
 
     // error code thrown when couldn't connect to Wi-Fi
-    static const uint8_t CannotConnectToWifi = 3;
+    CannotConnectToWifi = 3,
 
     // error code thrown when MQTT broker connection fails
-    static const uint8_t MqttConnectionFailed = 5;
+    MqttConnectionFailed = 5
 };
 
 // the main class for the framework, must be initialized in your code
