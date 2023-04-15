@@ -184,6 +184,7 @@ public:
     const char *heartbeat_topic = "debug/heartbeat";
 
     void mqttCommandReceived(char *topic, uint8_t *message, unsigned int length);
+    void processCommand(String command);
 
     // event handlers for OTA situations (onStart, onEnd, etc.)
     MokoshOTAHandlers otaEvents;
@@ -292,8 +293,6 @@ private:
 
     void publishShortVersion();
     void publishIP();
-
-    void processCommand(String command);
 
     char ssid[16] = {0};
 

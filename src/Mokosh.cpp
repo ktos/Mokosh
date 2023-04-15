@@ -89,12 +89,19 @@ bool Mokosh::configureMqttClient()
     return true;
 }
 
+void handleRemoteDebugCommand()
+{
+    String cmd = Debug.getLastCommand();
+    _instance->processCommand(cmd);
+}
+
 void Mokosh::setupRemoteDebug()
 {
     Debug.begin(this->hostName, (uint8_t)this->debugLevel);
     Debug.setSerialEnabled(true);
     Debug.setResetCmdEnabled(true);
     Debug.showTime(true);
+    Debug.setCallBackProjectCmds(handleRemoteDebugCommand);
 
     this->debugReady = true;
 }
