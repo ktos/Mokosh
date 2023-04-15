@@ -585,13 +585,171 @@ void Mokosh::publishShortVersion()
     }
 }
 
-void Mokosh::mqttCommandReceived(char *topic, uint8_t *message, unsigned int length)
+void Mokosh::processCommand(String command)
 {
-    if (strstr(topic, "cmd") == NULL)
+    if (command == "gver" || command == "getver")
     {
+        this->publishShortVersion();
+
         return;
     }
 
+    if (command == "mdebug")
+    {
+        mdebugE("mdebug REQUESTED");
+
+        return;
+    }
+
+    if (command == "getip")
+    {
+        this->publishIP();
+
+        return;
+    }
+
+    if (command == "getfullver")
+    {
+        this->publish(debug_response_topic, this->version);
+
+        return;
+    }
+
+    if (command == "gmd5")
+    {
+        char md5[128];
+        ESP.getSketchMD5().toCharArray(md5, 128);
+        this->publish(debug_response_topic, md5);
+
+        return;
+    }
+
+    if (command == "getbuilddate")
+    {
+        this->publish(debug_response_topic, this->buildDate);
+
+        return;
+    }
+
+    if (command == "reboot")
+    {
+        ESP.restart();
+
+        return;
+    }
+
+    if (command == "factory")
+    {
+        this->factoryReset();
+
+        return;
+    }
+
+    if (command == "reloadconfig")
+    {
+        this->config.reload();
+
+        return;
+    }
+
+    if (command.startsWith("showerror="))
+    {
+        long errorCode = command.substring(10).toInt();
+        this->error(errorCode);
+        return;
+    }
+
+    if (command == "saveconfig")
+    {
+        this->config.save();
+        return;
+    }
+
+    if (command.startsWith("showconfigs="))
+    {
+        String field = command.substring(12);
+        String value = this->config.get<String>(field.c_str());
+
+        this->publish(debug_response_topic, value);
+        return;
+    }
+
+    if (command.startsWith("showconfigi="))
+    {
+        String field = command.substring(12);
+        int value = this->config.get<int>(field.c_str());
+
+        this->publish(debug_response_topic, value);
+        return;
+    }
+
+    if (command.startsWith("showconfigf="))
+    {
+        String field = command.substring(12);
+        float value = this->config.get<float>(field.c_str());
+
+        this->publish(debug_response_topic, value);
+        return;
+    }
+
+    if (command.startsWith("setconfigs="))
+    {
+        String param = command.substring(11);
+
+        String field = param.substring(0, param.indexOf('|'));
+        String value = param.substring(param.indexOf('|') + 1);
+
+        mdebugV("Setting configuration: field: %s, new value: %s", field.c_str(), value.c_str());
+
+        this->config.set(field.c_str(), value);
+
+        return;
+    }
+
+    if (command.startsWith("setconfigi="))
+    {
+        String param = command.substring(11);
+
+        String field = param.substring(0, param.indexOf('|'));
+        String value = param.substring(param.indexOf('|') + 1);
+
+        mdebugV("Setting configuration: field: %s, new value: %d", field.c_str(), value.toInt());
+
+        this->config.set(field.c_str(), (int)(value.toInt()));
+
+        return;
+    }
+
+    if (command.startsWith("setconfigf="))
+    {
+        String param = command.substring(11);
+
+        String field = param.substring(0, param.indexOf('|'));
+        String value = param.substring(param.indexOf('|') + 1);
+
+        mdebugV("Setting configuration: field: %s, new value: %f", field.c_str(), value.toFloat());
+
+        this->config.set(field.c_str(), value.toFloat());
+
+        return;
+    }
+
+    if (command.startsWith("setdebuglevel="))
+    {
+        long level = command.substring(14).toInt();
+        this->setDebugLevel((DebugLevel)(int)level);
+        return;
+    }
+
+    if (this->onCommand != nullptr)
+    {
+        mdebugV("Passing command to custom command handler");
+        this->onCommand(command);
+    }
+}
+
+void Mokosh::mqttCommandReceived(char *topic, uint8_t *message, unsigned int length)
+{
     char msg[32] = {0};
     for (unsigned int i = 0; i < length; i++)
     {
@@ -601,169 +759,17 @@ void Mokosh::mqttCommandReceived(char *topic, uint8_t *message, unsigned int len
 
     mdebugD("Command: %s", msg);
 
-    if (strcmp(msg, "gver") == 0 || strcmp(msg, "getver") == 0)
+    if (String(topic) == this->getMqttPrefix() + String(this->cmd_topic))
     {
-        this->publishShortVersion();
-
-        return;
+        String command = String(msg);
+        this->processCommand(command);
     }
-
-    if (strcmp(msg, "mdebug") == 0)
+    else
     {
-        mdebugE("mdebug REQUESTED");
-
-        return;
-    }
-
-    if (strcmp(msg, "getip") == 0)
-    {
-        this->publishIP();
-
-        return;
-    }
-
-    if (strcmp(msg, "getfullver") == 0)
-    {
-        this->publish(debug_response_topic, this->version);
-
-        return;
-    }
-
-    if (strcmp(msg, "gmd5") == 0)
-    {
-        char md5[128];
-        ESP.getSketchMD5().toCharArray(md5, 128);
-        this->publish(debug_response_topic, md5);
-
-        return;
-    }
-
-    if (strcmp(msg, "getbuilddate") == 0)
-    {
-        this->publish(debug_response_topic, this->buildDate);
-
-        return;
-    }
-
-    if (strcmp(msg, "reboot") == 0)
-    {
-        ESP.restart();
-
-        return;
-    }
-
-    if (strcmp(msg, "factory") == 0)
-    {
-        this->factoryReset();
-
-        return;
-    }
-
-    if (strcmp(msg, "reloadconfig") == 0)
-    {
-        this->config.reload();
-
-        return;
-    }
-
-    if (msg[0] == 's')
-    {
-        String msg2 = String(msg);
-
-        if (msg2.startsWith("showerror="))
+        if (this->onMessage != nullptr)
         {
-            long errorCode = msg2.substring(10).toInt();
-            this->error(errorCode);
-            return;
+            this->onMessage(String(topic), message, length);
         }
-
-        if (msg2 == "saveconfig")
-        {
-            this->config.save();
-            return;
-        }
-
-        if (msg2.startsWith("showconfigs="))
-        {
-            String field = msg2.substring(12);
-            String value = this->config.get<String>(field.c_str());
-
-            this->publish(debug_response_topic, value);
-            return;
-        }
-
-        if (msg2.startsWith("showconfigi="))
-        {
-            String field = msg2.substring(12);
-            int value = this->config.get<int>(field.c_str());
-
-            this->publish(debug_response_topic, value);
-            return;
-        }
-
-        if (msg2.startsWith("showconfigf="))
-        {
-            String field = msg2.substring(12);
-            float value = this->config.get<float>(field.c_str());
-
-            this->publish(debug_response_topic, value);
-            return;
-        }
-
-        if (msg2.startsWith("setconfigs="))
-        {
-            String param = msg2.substring(11);
-
-            String field = param.substring(0, param.indexOf('|'));
-            String value = param.substring(param.indexOf('|') + 1);
-
-            mdebugV("Setting configuration: field: %s, new value: %s", field.c_str(), value.c_str());
-
-            this->config.set(field.c_str(), value);
-
-            return;
-        }
-
-        if (msg2.startsWith("setconfigi="))
-        {
-            String param = msg2.substring(11);
-
-            String field = param.substring(0, param.indexOf('|'));
-            String value = param.substring(param.indexOf('|') + 1);
-
-            mdebugV("Setting configuration: field: %s, new value: %d", field.c_str(), value.toInt());
-
-            this->config.set(field.c_str(), (int)(value.toInt()));
-
-            return;
-        }
-
-        if (msg2.startsWith("setconfigf="))
-        {
-            String param = msg2.substring(11);
-
-            String field = param.substring(0, param.indexOf('|'));
-            String value = param.substring(param.indexOf('|') + 1);
-
-            mdebugV("Setting configuration: field: %s, new value: %f", field.c_str(), value.toFloat());
-
-            this->config.set(field.c_str(), value.toFloat());
-
-            return;
-        }
-
-        if (msg2.startsWith("setdebuglevel="))
-        {
-            long level = msg2.substring(14).toInt();
-            this->setDebugLevel((DebugLevel)(int)level);
-            return;
-        }
-    }
-
-    if (this->onCommand != nullptr)
-    {
-        mdebugD("Passing message to custom command handler");
-        this->onCommand(message, length);
     }
 }
 

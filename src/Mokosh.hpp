@@ -138,17 +138,21 @@ public:
 
     // defines callback to be run when command not handled by internal
     // means is received
-    // must be called before begin()
+    // must be set before begin()
     THandlerFunction_Command onCommand;
 
+    // defines callback to be run when message is received to a subscribed
+    // topic
+    THandlerFunction_Message onMessage;
+
     // defines callback to be run when error is thrown
-    // must be called before begin()
+    // must be set before begin()
     THandlerFunction_MokoshError onError;
 
     // defines callback function func to be run on a specific time interval
     // Mokosh will automatically fire the function when time (in milliseconds)
     // occurs since the last run
-    // must be called before begin()
+    // must be called before begin() or you should start() on your own
     // you can also use TickTwo manually, by accessing vector tickers
     void registerIntervalFunction(fptr func, unsigned long time);
 
@@ -288,6 +292,8 @@ private:
 
     void publishShortVersion();
     void publishIP();
+
+    void processCommand(String command);
 
     char ssid[16] = {0};
 
