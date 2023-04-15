@@ -596,6 +596,7 @@ void Mokosh::processCommand(String command)
 {
     if (command == "gver" || command == "getver")
     {
+        mdebugD("Version: %s", this->version.c_str());
         this->publishShortVersion();
 
         return;
@@ -617,6 +618,7 @@ void Mokosh::processCommand(String command)
 
     if (command == "getfullver")
     {
+        mdebugD("Version: %s", this->version.c_str());
         this->publish(debug_response_topic, this->version);
 
         return;
@@ -626,6 +628,7 @@ void Mokosh::processCommand(String command)
     {
         char md5[128];
         ESP.getSketchMD5().toCharArray(md5, 128);
+        mdebugD("Firmware MD5: %s", md5);
         this->publish(debug_response_topic, md5);
 
         return;
@@ -633,6 +636,7 @@ void Mokosh::processCommand(String command)
 
     if (command == "getbuilddate")
     {
+        mdebugD("Build date: %s", this->buildDate.c_str());
         this->publish(debug_response_topic, this->buildDate);
 
         return;
@@ -647,6 +651,7 @@ void Mokosh::processCommand(String command)
 
     if (command == "factory")
     {
+        mdebugW("Factory reset initiated");
         this->factoryReset();
 
         return;
@@ -654,6 +659,7 @@ void Mokosh::processCommand(String command)
 
     if (command == "reloadconfig")
     {
+        mdebugI("Config reload initiated");
         this->config.reload();
 
         return;
@@ -662,12 +668,14 @@ void Mokosh::processCommand(String command)
     if (command.startsWith("showerror="))
     {
         long errorCode = command.substring(10).toInt();
+        mdebugE("Error initiated: %ld", errorCode);
         this->error(errorCode);
         return;
     }
 
     if (command == "saveconfig")
     {
+        mdebugD("Config saved");
         this->config.save();
         return;
     }
@@ -678,6 +686,7 @@ void Mokosh::processCommand(String command)
         String value = this->config.get<String>(field.c_str());
 
         this->publish(debug_response_topic, value);
+        mdebugD("config %s = %s", field.c_str(), value.c_str());
         return;
     }
 
@@ -687,6 +696,7 @@ void Mokosh::processCommand(String command)
         int value = this->config.get<int>(field.c_str());
 
         this->publish(debug_response_topic, value);
+        mdebugD("config %s = %i", field.c_str(), value);
         return;
     }
 
@@ -696,6 +706,7 @@ void Mokosh::processCommand(String command)
         float value = this->config.get<float>(field.c_str());
 
         this->publish(debug_response_topic, value);
+        mdebugD("config %s = %f", field.c_str(), value);
         return;
     }
 
@@ -706,7 +717,7 @@ void Mokosh::processCommand(String command)
         String field = param.substring(0, param.indexOf('|'));
         String value = param.substring(param.indexOf('|') + 1);
 
-        mdebugV("Setting configuration: field: %s, new value: %s", field.c_str(), value.c_str());
+        mdebugD("Setting configuration: field: %s, new value: %s", field.c_str(), value.c_str());
 
         this->config.set(field.c_str(), value);
 
@@ -720,7 +731,7 @@ void Mokosh::processCommand(String command)
         String field = param.substring(0, param.indexOf('|'));
         String value = param.substring(param.indexOf('|') + 1);
 
-        mdebugV("Setting configuration: field: %s, new value: %d", field.c_str(), value.toInt());
+        mdebugD("Setting configuration: field: %s, new value: %d", field.c_str(), value.toInt());
 
         this->config.set(field.c_str(), (int)(value.toInt()));
 
@@ -734,7 +745,7 @@ void Mokosh::processCommand(String command)
         String field = param.substring(0, param.indexOf('|'));
         String value = param.substring(param.indexOf('|') + 1);
 
-        mdebugV("Setting configuration: field: %s, new value: %f", field.c_str(), value.toFloat());
+        mdebugD("Setting configuration: field: %s, new value: %f", field.c_str(), value.toFloat());
 
         this->config.set(field.c_str(), value.toFloat());
 
@@ -757,17 +768,22 @@ void Mokosh::processCommand(String command)
 
 void Mokosh::mqttCommandReceived(char *topic, uint8_t *message, unsigned int length)
 {
-    char msg[32] = {0};
+    if (length > 64)
+    {
+        mdebugE("MQTT message too long, ignoring.");
+        return;
+    }
+
+    char msg[64] = {0};
     for (unsigned int i = 0; i < length; i++)
     {
         msg[i] = message[i];
     }
     msg[length + 1] = 0;
 
-    mdebugD("Command: %s", msg);
-
     if (String(topic) == this->getMqttPrefix() + String(this->cmd_topic))
     {
+        mdebugV("MQTT command: %s", msg);
         String command = String(msg);
         this->processCommand(command);
     }
@@ -776,6 +792,10 @@ void Mokosh::mqttCommandReceived(char *topic, uint8_t *message, unsigned int len
         if (this->onMessage != nullptr)
         {
             this->onMessage(String(topic), message, length);
+        }
+        else
+        {
+            mdebugW("MQTT message received, but no handler, ignoring.");
         }
     }
 }
