@@ -12,6 +12,7 @@
 #if defined(ESP32)
 #include <ESPmDNS.h>
 #include <LittleFS.h>
+#include <WiFiMulti.h>
 #endif
 
 #include <ArduinoOTA.h>

@@ -14,6 +14,7 @@ public:
     const char *key_ota_password = "otaPasswordHash";
     const char *key_ssid = "ssid";
     const char *key_wifi_password = "password";
+    const char *key_multi_ssid = "ssids";
     const char *key_client_id = "mqttClientId";
 
     template <typename T>

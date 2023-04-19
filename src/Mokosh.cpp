@@ -477,25 +477,63 @@ wl_status_t Mokosh::connectWifi()
     // workaround for https://github.com/espressif/arduino-esp32/issues/4732
     WiFi.config(((u32_t)0x0UL), ((u32_t)0x0UL), ((u32_t)0x0UL));
     WiFi.setHostname(fullHostName);
+
+    bool multi = this->config.hasKey(this->config.key_multi_ssid);
+#else
+    bool multi = false;
 #endif
-
-    String ssid = this->config.get<String>(this->config.key_ssid, "");
-    String password = this->config.get<String>(this->config.key_wifi_password);
-
-    if (ssid == "")
+    if (multi)
     {
-        mdebugE("Configured ssid is empty, cannot connect to Wi-Fi");
-        return wl_status_t::WL_NO_SSID_AVAIL;
+#if defined(ESP32)
+        WiFiMulti wifiMulti;
+
+        String multi = this->config.get<String>(this->config.key_multi_ssid, "");
+        mdebugV("Will try multiple SSID");
+
+        StaticJsonDocument<256> doc;
+
+        DeserializationError error = deserializeJson(doc, multi);
+
+        if (error)
+        {
+            mdebugE("Configured multiple ssid is wrong, deserialization error %s", error.c_str());
+            return wl_status_t::WL_NO_SSID_AVAIL;
+        }
+
+        for (JsonObject item : doc.as<JsonArray>())
+        {
+            const char *ssid = item["ssid"];
+            const char *password = item["password"];
+
+            wifiMulti.addAP(ssid, password);
+        }
+
+        if (wifiMulti.run(10000) == WL_CONNECTED)
+        {
+            mdebugI("Connected to %s", WiFi.SSID().c_str());
+        }
+#endif
     }
-
-    WiFi.begin(ssid.c_str(), password.c_str());
-    this->isWifiConfigured = true;
-
-    unsigned long startTime = millis();
-    while (WiFi.status() != WL_CONNECTED && millis() - startTime < 10000)
+    else
     {
-        Serial.print(".");
-        delay(250);
+        String ssid = this->config.get<String>(this->config.key_ssid, "");
+        String password = this->config.get<String>(this->config.key_wifi_password);
+
+        if (ssid == "")
+        {
+            mdebugE("Configured ssid is empty, cannot connect to Wi-Fi");
+            return wl_status_t::WL_NO_SSID_AVAIL;
+        }
+
+        WiFi.begin(ssid.c_str(), password.c_str());
+        this->isWifiConfigured = true;
+
+        unsigned long startTime = millis();
+        while (WiFi.status() != WL_CONNECTED && millis() - startTime < 10000)
+        {
+            Serial.print(".");
+            delay(250);
+        }
     }
 
     wl_status_t wifiStatus = WiFi.status();
