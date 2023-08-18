@@ -59,7 +59,7 @@ bool MokoshConfig::reload()
     }
 
     size_t size = configFile.size();
-    if (size > 500)
+    if (size > 1000)
     {
         mdebugE("Config file too large");
         return false;

@@ -65,7 +65,7 @@ public:
     bool configFileExists();
 
 private:
-    StaticJsonDocument<500> config;
+    StaticJsonDocument<1024> config;
 };
 
 #endif
