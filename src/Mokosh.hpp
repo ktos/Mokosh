@@ -39,6 +39,8 @@ typedef enum DebugLevel
 #define EVENTS_COUNT 10
 #define HEARTBEAT 10000
 #define MINUTES 60000
+#define SECONDS 1000
+#define HOURS 360000
 
 #define mdebug(lvl, fmt, ...) Mokosh::debug(lvl, __func__, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
 #define mdebugA(fmt, ...) Mokosh::debug(DebugLevel::ANY, __func__, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
@@ -283,6 +285,7 @@ private:
     bool isForceWifiReconnect = false;
     bool isWifiConfigured = false;
     bool isHeartbeatEnabled = true;
+    bool isAfterBegin = false;
     wl_status_t lastWifiStatus;
 
     DebugLevel debugLevel = DebugLevel::WARNING;

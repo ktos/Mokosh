@@ -341,6 +341,7 @@ void Mokosh::begin(String prefix, bool autoconnect)
     initializeTickers();
 
     mdebugI("Starting operations...");
+    isAfterBegin = true;
 }
 
 void Mokosh::publishIP()
@@ -360,6 +361,12 @@ void Mokosh::publishIP()
 
 Mokosh *Mokosh::setConfigFile(bool value)
 {
+    if (this->isAfterBegin)
+    {
+        mdebugE("Must be called before begin()");
+        return this;
+    }
+
     this->isFSEnabled = value;
     return this;
 }
@@ -840,6 +847,12 @@ void Mokosh::mqttCommandReceived(char *topic, uint8_t *message, unsigned int len
 
 void Mokosh::registerIntervalFunction(fptr func, unsigned long time)
 {
+    if (this->isAfterBegin)
+    {
+        mdebugE("Must be called before begin()");
+        return;
+    }
+
     mdebugV("Registering interval function on time %ld", time);
     std::shared_ptr<TickTwo> ticker = std::make_shared<TickTwo>(func, time, 0, MILLIS);
     this->tickers.push_back(ticker);
@@ -947,6 +960,12 @@ Mokosh *Mokosh::setRebootOnError(bool value)
 
 Mokosh *Mokosh::setBuildMetadata(String version, String buildDate)
 {
+    if (this->isAfterBegin)
+    {
+        mdebugE("Must be called before begin()");
+        return this;
+    }
+
     this->version = version;
     this->buildDate = buildDate;
     return this;
@@ -954,6 +973,12 @@ Mokosh *Mokosh::setBuildMetadata(String version, String buildDate)
 
 Mokosh *Mokosh::setOta(bool value)
 {
+    if (this->isAfterBegin)
+    {
+        mdebugE("Must be called before begin()");
+        return this;
+    }
+
     this->isOTAEnabled = value;
 
     if (this->isOTAEnabled)
