@@ -185,8 +185,12 @@ public:
     // the name of subtopic used for heartbeat messages
     const char *heartbeat_topic = "debug/heartbeat";
 
-    void mqttCommandReceived(char *topic, uint8_t *message, unsigned int length);
-    void processCommand(String command);
+    // this is a PRIVATE function, should not be used from the external code
+    // exposed only as a workaround
+    void _mqttCommandReceived(char *topic, uint8_t *message, unsigned int length);
+
+    // this is a PRIVATE function, exposed only as a workaround
+    void _processCommand(String command);
 
     // event handlers for OTA situations (onStart, onEnd, etc.)
     MokoshOTAHandlers otaEvents;
@@ -260,9 +264,6 @@ public:
     // vector of tickers, functions run on the given interval
     std::vector<std::shared_ptr<TickTwo>> getTickers();
 
-    // initialization of tickers, is called automatically by begin()
-    void initializeTickers();
-
     // registers a function that will run in a timeout, be default it will be run
     // one time (one-shot), and time tracking starts immediately
     void registerTimeoutFunction(fptr func, unsigned long time, int runs = 1, bool start = true);
@@ -300,6 +301,9 @@ private:
 
     void publishShortVersion();
     void publishIP();
+
+    // initialization of tickers, is called automatically by begin()
+    void initializeTickers();
 
     char ssid[16] = {0};
 

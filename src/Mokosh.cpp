@@ -4,7 +4,7 @@ static Mokosh *_instance;
 
 void _mqtt_callback(char *topic, uint8_t *message, unsigned int length)
 {
-    _instance->mqttCommandReceived(topic, message, length);
+    _instance->_mqttCommandReceived(topic, message, length);
 }
 
 RemoteDebug Debug;
@@ -92,7 +92,7 @@ bool Mokosh::configureMqttClient()
 void handleRemoteDebugCommand()
 {
     String cmd = Debug.getLastCommand();
-    _instance->processCommand(cmd);
+    _instance->_processCommand(cmd);
 }
 
 void Mokosh::setupRemoteDebug()
@@ -637,7 +637,7 @@ void Mokosh::publishShortVersion()
     }
 }
 
-void Mokosh::processCommand(String command)
+void Mokosh::_processCommand(String command)
 {
     if (command == "gver" || command == "getver")
     {
@@ -811,7 +811,7 @@ void Mokosh::processCommand(String command)
     }
 }
 
-void Mokosh::mqttCommandReceived(char *topic, uint8_t *message, unsigned int length)
+void Mokosh::_mqttCommandReceived(char *topic, uint8_t *message, unsigned int length)
 {
     if (length > 64)
     {
@@ -830,7 +830,7 @@ void Mokosh::mqttCommandReceived(char *topic, uint8_t *message, unsigned int len
     {
         mdebugV("MQTT command: %s", msg);
         String command = String(msg);
-        this->processCommand(command);
+        this->_processCommand(command);
     }
     else
     {
