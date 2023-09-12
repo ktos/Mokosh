@@ -847,15 +847,29 @@ void Mokosh::mqttCommandReceived(char *topic, uint8_t *message, unsigned int len
 
 void Mokosh::registerIntervalFunction(fptr func, unsigned long time)
 {
-    if (this->isAfterBegin)
-    {
-        mdebugE("Must be called before begin()");
-        return;
-    }
-
     mdebugV("Registering interval function on time %ld", time);
     std::shared_ptr<TickTwo> ticker = std::make_shared<TickTwo>(func, time, 0, MILLIS);
     this->tickers.push_back(ticker);
+
+    if (this->isAfterBegin)
+    {
+        mdebugV("Called after begin(), running ticker immediately");
+        ticker->start();
+        return;
+    }
+}
+
+void Mokosh::registerTimeoutFunction(fptr func, unsigned long time, int runs, bool start)
+{
+    mdebugV("Registering oneshot function on time %ld that will run %d times", time, runs);
+    std::shared_ptr<TickTwo> ticker = std::make_shared<TickTwo>(func, time, runs, MILLIS);
+    this->tickers.push_back(ticker);
+
+    if (start)
+    {
+        ticker->start();
+        return;
+    }
 }
 
 void Mokosh::publish(const char *subtopic, String payload)

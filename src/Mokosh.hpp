@@ -155,7 +155,6 @@ public:
     // defines callback function func to be run on a specific time interval
     // Mokosh will automatically fire the function when time (in milliseconds)
     // occurs since the last run
-    // must be called before begin() or you should start() on your own
     // you can also use TickTwo manually, by accessing vector tickers
     void registerIntervalFunction(fptr func, unsigned long time);
 
@@ -263,6 +262,10 @@ public:
 
     // initialization of tickers, is called automatically by begin()
     void initializeTickers();
+
+    // registers a function that will run in a timeout, be default it will be run
+    // one time (one-shot), and time tracking starts immediately
+    void registerTimeoutFunction(fptr func, unsigned long time, int runs = 1, bool start = true);
 
 private:
     bool debugReady;
