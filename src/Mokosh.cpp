@@ -119,6 +119,12 @@ Mokosh *Mokosh::setCustomClient(Client &client)
     return this;
 }
 
+Mokosh *Mokosh::setIPRetained(bool value)
+{
+    this->isIPRetained = value;
+    return this;
+}
+
 void Mokosh::setupMqttClient()
 {
     this->mqtt = new PubSubClient(*(this->client));
@@ -355,7 +361,7 @@ void Mokosh::publishIP()
         snprintf(msg, sizeof(msg) - 1, "{\"ipaddress\": \"%s\"}", ipbuf);
 
         mdebugV("Sending IP");
-        this->publish(debug_ip_topic, msg, true);
+        this->publish(debug_ip_topic, msg, this->isIPRetained);
     }
 }
 

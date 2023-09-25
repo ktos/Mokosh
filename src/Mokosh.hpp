@@ -212,6 +212,10 @@ public:
     // sets if the heartbeat messages should be send
     Mokosh *setHeartbeat(bool value);
 
+    // sets if the IP message on hello should be retained
+    // e.g. on Scaleway retained flag forces disconnect of the client
+    Mokosh *setIPRetained(bool value);
+
     // returns if the RemoteDebug is ready
     bool isDebugReady();
 
@@ -290,6 +294,7 @@ private:
     bool isWifiConfigured = false;
     bool isHeartbeatEnabled = true;
     bool isAfterBegin = false;
+    bool isIPRetained = true;
     wl_status_t lastWifiStatus;
 
     DebugLevel debugLevel = DebugLevel::WARNING;
