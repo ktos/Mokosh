@@ -607,6 +607,11 @@ void Mokosh::loop()
         }
     }
 
+    if (!this->mqtt->connected())
+    {
+        this->reconnect();
+    }
+
     if (this->mqtt != nullptr)
         this->mqtt->loop();
 
