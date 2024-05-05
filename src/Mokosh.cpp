@@ -293,7 +293,12 @@ void Mokosh::begin(String prefix, bool autoconnect)
 #endif
 
     strcpy(this->hostNameC, hostName.c_str());
+
+#ifndef OVERRIDE_HOSTNAME
     mdebugD("ID: %s", hostString);
+#else
+    mdebugD("ID: %s, overridden to %s", hostString, OVERRIDE_HOSTNAME);
+#endif
 
     if (this->isFSEnabled)
     {
