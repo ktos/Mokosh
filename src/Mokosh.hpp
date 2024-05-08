@@ -167,6 +167,11 @@ public:
     // removes config.json and reboots, entering FirstRun mode
     void factoryReset();
 
+    // initializes FS and loads config file
+    // is done automatically by begin(), but it can be run earlier
+    // if access to config is needed before begin()
+    void initializeFS();
+
     // the name of subtopic used for commands
     const char *cmd_topic = "cmd";
 
@@ -313,6 +318,47 @@ private:
     char ssid[16] = {0};
 
     std::vector<std::shared_ptr<TickTwo>> tickers;
+};
+
+// some functions for improving resilience
+class MokoshResilience
+{
+public:
+    // will retry the operation if returned false, each time delaying it
+    // a bit longer, until the name of trials is being exceeded
+    static bool retry(std::function<bool(void)> operation, int trials = 3, long delayTime = 100, int delayFactor = 2)
+    {
+        int i = 0;
+        while (i < trials)
+        {
+            if (operation())
+                return true;
+
+            long time = delayTime * power(i + 1, delayFactor);
+            mdebugV("Resilience operation failed, retrying in %d", time);
+            delay(time);
+            i++;
+        }
+
+        mdebugV("Resilience operation failed after %d trials, giving up!", trials);
+        return false;
+    }
+
+private:
+    static long power(int base, int exponent)
+    {
+        if (exponent == 0)
+        {
+            return 1;
+        }
+
+        long result = base;
+        for (int i = 1; i < exponent; i++)
+        {
+            result *= base;
+        }
+        return result;
+    }
 };
 
 #endif

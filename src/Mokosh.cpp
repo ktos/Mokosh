@@ -257,6 +257,19 @@ void Mokosh::initializeTickers()
     }
 }
 
+void Mokosh::initializeFS()
+{
+    if (this->isFSEnabled)
+    {
+        if (!this->config.prepareFS())
+        {
+            this->error(MokoshErrors::FileSystemNotAvailable);
+        }
+
+        this->config.reload();
+    }
+}
+
 void Mokosh::begin(String prefix, bool autoconnect)
 {
     Serial.begin(115200);
@@ -300,15 +313,7 @@ void Mokosh::begin(String prefix, bool autoconnect)
     mdebugD("ID: %s, overridden to %s", hostString, OVERRIDE_HOSTNAME);
 #endif
 
-    if (this->isFSEnabled)
-    {
-        if (!this->config.prepareFS())
-        {
-            this->error(MokoshErrors::FileSystemNotAvailable);
-        }
-
-        this->config.reload();
-    }
+    initializeFS();
 
     if (autoconnect)
     {
