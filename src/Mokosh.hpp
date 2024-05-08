@@ -337,7 +337,7 @@ namespace MokoshResilience
                 if (operation())
                     return true;
 
-                long time = delayTime * power(i + 1, delayFactor);
+                long time = delayTime * power(delayFactor, i + 1);
                 mdebugV("Resilience operation failed, retrying in %d", time);
                 delay(time);
                 i++;
