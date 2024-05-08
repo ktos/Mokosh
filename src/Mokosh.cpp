@@ -15,7 +15,7 @@ Mokosh::Mokosh()
     Mokosh::debugReady = false;
 }
 
-void Mokosh::debug(DebugLevel level, const char *func, const char *file, int line, const char *fmt, ...)
+void Mokosh::debug(LogLevel level, const char *func, const char *file, int line, const char *fmt, ...)
 {
     char dest[256];
     va_list argptr;
@@ -28,19 +28,19 @@ void Mokosh::debug(DebugLevel level, const char *func, const char *file, int lin
         char lvl;
         switch (level)
         {
-        case DebugLevel::DEBUG:
+        case LogLevel::DEBUG:
             lvl = 'D';
             break;
-        case DebugLevel::ERROR:
+        case LogLevel::ERROR:
             lvl = 'E';
             break;
-        case DebugLevel::INFO:
+        case LogLevel::INFO:
             lvl = 'I';
             break;
-        case DebugLevel::WARNING:
+        case LogLevel::WARNING:
             lvl = 'W';
             break;
-        case DebugLevel::VERBOSE:
+        case LogLevel::VERBOSE:
             lvl = 'V';
             break;
         default:
@@ -137,18 +137,6 @@ void Mokosh::setupMqttClient()
                 this->error(MokoshErrors::MqttConnectionFailed);
         }
     }
-}
-
-void Mokosh::setupMDNS()
-{
-    if (!MDNS.begin(this->hostNameC))
-    {
-        mdebugE("MDNS couldn't be enabled");
-        return;
-    }
-
-    this->addMDNSService("mokosh", "tcp", 23);
-    this->addMDNSServiceProps("mokosh", "tcp", "version", this->version.c_str());
 }
 
 void Mokosh::setupOta()
@@ -270,6 +258,11 @@ void Mokosh::initializeFS()
     }
 }
 
+String Mokosh::getVersion()
+{
+    return this->version;
+}
+
 void Mokosh::begin(String prefix, bool autoconnect)
 {
     Serial.begin(115200);
@@ -324,10 +317,7 @@ void Mokosh::begin(String prefix, bool autoconnect)
             this->setupWiFiClient();
             this->setupMqttClient();
 
-            if (this->isMDNSEnabled)
-            {
-                this->setupMDNS();
-            }
+            this->setupWiFiDependentServices();
 
             if (this->isOTAEnabled)
             {
@@ -591,7 +581,7 @@ Mokosh *Mokosh::getInstance()
     return _instance;
 }
 
-Mokosh *Mokosh::setDebugLevel(DebugLevel level)
+Mokosh *Mokosh::setLogLevel(LogLevel level)
 {
     this->debugLevel = level;
 
@@ -823,7 +813,7 @@ void Mokosh::_processCommand(String command)
     if (command.startsWith("setdebuglevel="))
     {
         long level = command.substring(14).toInt();
-        this->setDebugLevel((DebugLevel)(int)level);
+        this->setLogLevel((LogLevel)(int)level);
         return;
     }
 
@@ -1036,16 +1026,6 @@ Mokosh *Mokosh::setMDNS(bool value)
     return this;
 }
 
-void Mokosh::addMDNSService(const char *service, const char *proto, uint16_t port)
-{
-    MDNS.addService(service, proto, port);
-}
-
-void Mokosh::addMDNSServiceProps(const char *service, const char *proto, const char *property, const char *value)
-{
-    MDNS.addServiceTxt(service, proto, property, value);
-}
-
 String Mokosh::getPrefix()
 {
     return this->prefix;
@@ -1065,4 +1045,32 @@ String Mokosh::getMqttPrefix()
 Client *Mokosh::getClient()
 {
     return this->client;
+}
+
+Mokosh *Mokosh::registerService(std::shared_ptr<MokoshService> service, bool isWiFiDependent)
+{
+    if (isWiFiDependent)
+        this->wifiDependentServices.push_back(service);
+    else
+        this->services.push_back(service);
+
+    return this;
+}
+
+void Mokosh::setupWiFiDependentServices()
+{
+    for (auto &service : this->wifiDependentServices)
+    {
+        if (!service->isSetup())
+            service->setup(std::make_shared<Mokosh>(*this));
+    }
+}
+
+void Mokosh::setupServices()
+{
+    for (auto &service : this->services)
+    {
+        if (!service->isSetup())
+            service->setup(std::make_shared<Mokosh>(*this));
+    }
 }

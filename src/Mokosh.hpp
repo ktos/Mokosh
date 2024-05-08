@@ -6,11 +6,9 @@
 #if defined(ESP8266)
 #include <ESP8266WiFi.h>
 #include <LittleFS.h>
-#include <ESP8266mDNS.h>
 #endif
 
 #if defined(ESP32)
-#include <ESPmDNS.h>
 #include <LittleFS.h>
 #include <WiFiMulti.h>
 #endif
@@ -23,9 +21,10 @@
 
 #include "MokoshConfig.hpp"
 #include "MokoshHandlers.hpp"
+#include "MokoshService.hpp"
 
 // Debug level - starts from 0 to 6, higher is more severe
-typedef enum DebugLevel
+typedef enum LogLevel
 {
     PROFILER = 0,
     VERBOSE = 1,
@@ -34,7 +33,7 @@ typedef enum DebugLevel
     WARNING = 4,
     ERROR = 5,
     ANY = 6
-} DebugLevel;
+} LogLevel;
 
 #define EVENTS_COUNT 10
 #define HEARTBEAT 10000
@@ -43,12 +42,12 @@ typedef enum DebugLevel
 #define HOURS 360000
 
 #define mdebug(lvl, fmt, ...) Mokosh::debug(lvl, __func__, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
-#define mdebugA(fmt, ...) Mokosh::debug(DebugLevel::ANY, __func__, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
-#define mdebugE(fmt, ...) Mokosh::debug(DebugLevel::ERROR, __func__, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
-#define mdebugI(fmt, ...) Mokosh::debug(DebugLevel::INFO, __func__, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
-#define mdebugD(fmt, ...) Mokosh::debug(DebugLevel::DEBUG, __func__, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
-#define mdebugV(fmt, ...) Mokosh::debug(DebugLevel::VERBOSE, __func__, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
-#define mdebugW(fmt, ...) Mokosh::debug(DebugLevel::WARNING, __func__, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
+#define mdebugA(fmt, ...) Mokosh::debug(LogLevel::ANY, __func__, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
+#define mdebugE(fmt, ...) Mokosh::debug(LogLevel::ERROR, __func__, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
+#define mdebugI(fmt, ...) Mokosh::debug(LogLevel::INFO, __func__, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
+#define mdebugD(fmt, ...) Mokosh::debug(LogLevel::DEBUG, __func__, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
+#define mdebugV(fmt, ...) Mokosh::debug(LogLevel::VERBOSE, __func__, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
+#define mdebugW(fmt, ...) Mokosh::debug(LogLevel::WARNING, __func__, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
 
 enum MokoshErrors
 {
@@ -71,7 +70,7 @@ class Mokosh
 public:
     Mokosh();
     // sets debug level verbosity, must be called before begin()
-    Mokosh *setDebugLevel(DebugLevel level);
+    Mokosh *setLogLevel(LogLevel level);
 
     // starts Mokosh system, connects to the Wi-Fi and MQTT
     // using the provided device prefix
@@ -89,15 +88,9 @@ public:
     // enables MDNS service (default false, unless OTA is enabled)
     Mokosh *setMDNS(bool value);
 
-    // sets up the MDNS responder -- ran automatically unless custom
-    // client is used
-    void setupMDNS();
-
-    // adds broadcasted MDNS service
-    void addMDNSService(const char *service, const char *proto, uint16_t port);
-
-    // adds broadcasted MDNS service props
-    void addMDNSServiceProps(const char *service, const char *proto, const char *property, const char *value);
+    // registers a MokoshService
+    // must be called before begin()
+    Mokosh *registerService(std::shared_ptr<MokoshService> service, bool isWiFiDependent);
 
     // publishes a new message on a Prefix_ABCDE/subtopic topic with
     // a given payload
@@ -122,7 +115,7 @@ public:
     // uses func parameter to be used with __func__ so there will
     // be printed in what function debug happened
     // use rather mdebug() macros instead
-    static void debug(DebugLevel level, const char *func, const char *file, int line, const char *fmt, ...);
+    static void debug(LogLevel level, const char *func, const char *file, int line, const char *fmt, ...);
 
     // enables ArduinoOTA subsystem (disabled by default)
     // must be called before begin()
@@ -277,6 +270,17 @@ public:
     // one time (one-shot), and time tracking starts immediately
     void registerTimeoutFunction(fptr func, unsigned long time, int runs = 1, bool start = true);
 
+    // returns a version string registered before build()
+    String getVersion();
+
+    // sets up all services which depend on Wi-Fi
+    // will be run automatically during begin() if Wi-Fi is configured
+    void setupWiFiDependentServices();
+
+    // sets up all other registered services
+    // will be run automatically during begin()
+    void setupServices();
+
 private:
     bool debugReady;
     String hostName;
@@ -302,7 +306,7 @@ private:
     bool isIPRetained = true;
     wl_status_t lastWifiStatus;
 
-    DebugLevel debugLevel = DebugLevel::WARNING;
+    LogLevel debugLevel = LogLevel::WARNING;
 
     bool configFileExists();
     bool isConfigurationSet();
@@ -318,84 +322,10 @@ private:
     char ssid[16] = {0};
 
     std::vector<std::shared_ptr<TickTwo>> tickers;
+    std::vector<std::shared_ptr<MokoshService>> services;
+    std::vector<std::shared_ptr<MokoshService>> wifiDependentServices;
 };
 
-namespace MokoshResilience
-{
-    // class for counting failures and finally returning a general failure
-    class CounterCircuitBreaker
-    {
-    public:
-        CounterCircuitBreaker(int limit = 3)
-        {
-            this->limit = limit;
-        }
-
-        void increment()
-        {
-            this->counter++;
-            mdebugV("Incremented failure counter to %d!", this->counter);
-
-            if (this->counter >= this->limit)
-                mdebugE("Failure counter exceeded threshold!");
-        }
-
-        void reset()
-        {
-            this->counter = 0;
-        }
-
-        bool isFail()
-        {
-            return this->counter >= this->limit;
-        }
-
-    private:
-        int limit = 0;
-        int counter = 0;
-    };
-
-    // class for retrying things with delay between trials
-    class Retry
-    {
-    public:
-        // will retry the operation if returned false, each time delaying it
-        // a bit longer, until the name of trials is being exceeded
-        static bool retry(std::function<bool(void)> operation, int trials = 3, long delayTime = 100, int delayFactor = 2)
-        {
-            int i = 0;
-            while (i < trials)
-            {
-                if (operation())
-                    return true;
-
-                long time = delayTime * power(delayFactor, i + 1);
-                mdebugV("Resilience operation failed, retrying in %d", time);
-                delay(time);
-                i++;
-            }
-
-            mdebugV("Resilience operation failed after %d trials, giving up!", trials);
-            return false;
-        }
-
-    private:
-        static long power(int base, int exponent)
-        {
-            if (exponent == 0)
-            {
-                return 1;
-            }
-
-            long result = base;
-            for (int i = 1; i < exponent; i++)
-            {
-                result *= base;
-            }
-            return result;
-        }
-    };
-
-}
+#include "MokoshResilience.hpp"
 
 #endif

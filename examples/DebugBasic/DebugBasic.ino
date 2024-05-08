@@ -19,7 +19,7 @@ void setup()
 {
     // debug set to Verbose will display everything
     // available are: verbose, debug, info, warning, error
-    mokosh.setDebugLevel(DebugLevel::VERBOSE);
+    mokosh.setLogLevel(LogLevel::VERBOSE);
     mokosh.onCommand = customCommand;
 
     // no custom configuration is set, so it will try to load
