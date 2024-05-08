@@ -84,7 +84,7 @@ public:
     // sets build information (SemVer and build date) used in the
     // responses to getv and getfullver commands and hello message
     // must be called before begin()
-    Mokosh *setBuildMetadata(String version, String buildDate);
+    Mokosh *setBuildMetadata(String version, String buildDate = "1970-01-01");
 
     // enables MDNS service (default false, unless OTA is enabled)
     Mokosh *setMDNS(bool value);
