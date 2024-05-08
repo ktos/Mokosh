@@ -322,6 +322,38 @@ private:
 
 namespace MokoshResilience
 {
+    // class for counting failures and finally returning a general failure
+    class CounterCircuitBreaker
+    {
+    public:
+        CounterCircuitBreaker(int limit = 3)
+        {
+            this->limit = limit;
+        }
+
+        void increment()
+        {
+            this->counter++;
+            mdebugV("Incremented failure counter to %d!", this->counter);
+
+            if (this->counter >= this->limit)
+                mdebugE("Failure counter exceeded threshold!");
+        }
+
+        void reset()
+        {
+            this->counter = 0;
+        }
+
+        bool isFail()
+        {
+            return this->counter >= this->limit;
+        }
+
+    private:
+        int limit = 0;
+        int counter = 0;
+    };
 
     // class for retrying things with delay between trials
     class Retry
