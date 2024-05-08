@@ -488,7 +488,9 @@ wl_status_t Mokosh::connectWifi()
 #if defined(ESP32)
     // workaround for https://github.com/espressif/arduino-esp32/issues/2537
     // workaround for https://github.com/espressif/arduino-esp32/issues/4732
+    // workaround for https://github.com/espressif/arduino-esp32/issues/6700#issuecomment-1140331981
     WiFi.config(((u32_t)0x0UL), ((u32_t)0x0UL), ((u32_t)0x0UL));
+    WiFi.mode(WIFI_MODE_NULL);
     WiFi.setHostname(fullHostName);
 
     bool multi = this->config.hasKey(this->config.key_multi_ssid);
