@@ -43,6 +43,12 @@ public:
     // loop, run internally by Mokosh:loop()
     virtual void loop() = 0;
 
+    // returns default name for keyed registration of the service
+    virtual const char *key()
+    {
+        return "";
+    }
+
     // some built-in names for dependencies
 
     // this service is dependent on the network connection

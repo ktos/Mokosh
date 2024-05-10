@@ -254,6 +254,12 @@ public:
         return std::static_pointer_cast<T>(this->services[key]);
     }
 
+    // returns all registered services
+    std::map<const char *, std::shared_ptr<MokoshService>> getRegisteredServices()
+    {
+        return services;
+    }
+
 private:
     bool debugReady;
     String hostName;
