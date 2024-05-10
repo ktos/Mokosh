@@ -7,6 +7,8 @@
 
 class Mokosh;
 
+// a class representing a Mokosh Service, a class which is started
+// with dependency on another classes and is being looped along with others
 class MokoshService
 {
 public:
@@ -14,17 +16,28 @@ public:
     {
     }
 
+    // sets up a new instance of a service, an instance to the main class
+    // is passed to check some data or read configuration
     virtual bool setup(std::shared_ptr<Mokosh> mokosh) = 0;
+
+    // returns if the class has been set up properly
     virtual bool isSetup()
     {
         return this->setupReady;
     }
 
+    // returns a list of other services this service is dependent on
+    // may include some built-in like NET or MQTT which have consts
+    // below
     virtual std::vector<const char *> getDependencies()
     {
         return {};
     }
 
+    // returns the default key at which the class should be registered
+    virtual const char *getDefaultKey() = 0;
+
+    // loop, run internally by Mokosh:loop()
     virtual void loop() = 0;
 
     // some built-in names for dependencies

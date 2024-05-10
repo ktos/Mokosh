@@ -1,4 +1,4 @@
-#include "MDNSService.hpp"
+#include "MokoshMDNSService.hpp"
 #include "Mokosh.hpp"
 
 #if defined(ESP8266)

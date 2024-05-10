@@ -984,6 +984,13 @@ bool Mokosh::setupService(const char *key, std::shared_ptr<MokoshService> servic
     bool depsReady = true;
     for (auto &deps : service->getDependencies())
     {
+        // built-in network and MQTT services are ignored
+        if (strcmp(deps, MokoshService::DEPENDENCY_NETWORK))
+            continue;
+
+        if (strcmp(deps, MokoshService::DEPENDENCY_MQTT))
+            continue;
+
         if (this->services.find(deps) == this->services.end())
         {
             mdebugE("Cannot setup service %s because the dependency %s is not set up yet.", key, deps);

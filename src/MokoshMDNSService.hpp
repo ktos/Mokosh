@@ -29,6 +29,11 @@ namespace MokoshServices
         {
             return {MokoshService::DEPENDENCY_NETWORK};
         }
+
+        virtual const char *getDefaultKey() override
+        {
+            return "MDNS";
+        }
     };
 }
 
