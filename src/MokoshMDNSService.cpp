@@ -13,7 +13,7 @@ namespace MokoshServices
 {
     bool MDNSService::setup(std::shared_ptr<Mokosh> mokosh)
     {
-        if (!MDNS.begin(mokosh->getHostName()))
+        if (!MDNS.begin(mokosh->getHostNameWithPrefix()))
         {
             mdebugE("MDNS couldn't be enabled");
             return false;

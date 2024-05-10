@@ -936,6 +936,12 @@ String Mokosh::getHostName()
     return this->hostName;
 }
 
+String Mokosh::getHostNameWithPrefix()
+{
+    String result = this->prefix + "_" + this->hostName;
+    return result;
+}
+
 String Mokosh::getMqttPrefix()
 {
     String result = this->prefix + "_" + this->hostName + "/";

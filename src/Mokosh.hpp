@@ -246,6 +246,9 @@ public:
     // gets prefix for MQTT topics for the current device
     String getMqttPrefix();
 
+    // returns prefix and hostname combination which are used for device ident
+    String getHostNameWithPrefix();
+
     // connects to Wi-Fi, manually
     wl_status_t connectWifi();
 
