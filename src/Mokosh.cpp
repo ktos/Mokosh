@@ -287,7 +287,7 @@ bool Mokosh::reconnect()
 
     uint8_t trials = 0;
 
-    while (!client->connected())
+    while (!this->mqtt->connected())
     {
         trials++;
 

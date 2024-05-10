@@ -9,6 +9,18 @@
 
 namespace MokoshServices
 {
+    class MokoshOTAHandlers
+    {
+        typedef std::function<void(ota_error_t)> THandlerFunction_OtaError;
+        typedef std::function<void(unsigned int, unsigned int)> THandlerFunction_Progress;
+
+    public:
+        THandlerFunction onStart;
+        THandlerFunction onEnd;
+        THandlerFunction_OtaError onError;
+        THandlerFunction_Progress onProgress;
+    };
+
     class OTAService : public MokoshService
     {
     public:
