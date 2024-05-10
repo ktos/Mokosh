@@ -34,6 +34,12 @@ public:
         return {};
     }
 
+    // handles a command
+    virtual bool command(String command, String param)
+    {
+        return false;
+    }
+
     // loop, run internally by Mokosh:loop()
     virtual void loop() = 0;
 

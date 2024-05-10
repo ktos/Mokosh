@@ -47,7 +47,7 @@ public:
     void set(const char *field, float value);
 
     // saves configuration to a config.json file
-    void save();
+    void saveConfig();
 
     // reads configuration from a config.json file
     bool reloadFromFile();
@@ -56,7 +56,7 @@ public:
     bool hasKey(const char *field);
 
     // removes configuration file
-    void removeFile();
+    void removeConfigFile();
 
     // returns if configuration has been set
     bool isConfigurationSet();
@@ -74,6 +74,8 @@ public:
     {
         return {};
     }
+
+    virtual bool command(String command, String param) override;
 
     static const char *KEY;
 

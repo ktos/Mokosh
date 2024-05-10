@@ -534,7 +534,7 @@ void Mokosh::loop()
 
 void Mokosh::factoryReset()
 {
-    this->config->removeFile();
+    this->config->removeConfigFile();
     ESP.restart();
 }
 
@@ -557,6 +557,16 @@ void Mokosh::publishShortVersion()
 
 void Mokosh::_processCommand(String command)
 {
+    String param = "";
+    int eq = command.indexOf('=');
+    if (eq > -1)
+    {
+        param = command.substring(eq + 1);
+        command = command.substring(0, eq);
+    }
+    mdebugI("Command: %s, param %s", command.c_str(), param.c_str());
+
+    // try the built-in commands first
     if (command == "gver" || command == "getver")
     {
         mdebugD("Version: %s", this->version.c_str());
@@ -607,117 +617,38 @@ void Mokosh::_processCommand(String command)
     if (command == "factory")
     {
         mdebugW("Factory reset initiated");
-        this->factoryReset();
+        LittleFS.format();
 
         return;
     }
 
-    if (command == "reloadconfig")
+    if (command == "showerror")
     {
-        mdebugI("Config reload initiated");
-        this->config->reloadFromFile();
-
-        return;
-    }
-
-    if (command.startsWith("showerror="))
-    {
-        long errorCode = command.substring(10).toInt();
+        long errorCode = param.toInt();
         mdebugE("Error initiated: %ld", errorCode);
         this->error(errorCode);
         return;
     }
 
-    if (command == "saveconfig")
+    if (command == "setdebuglevel")
     {
-        mdebugD("Config saved");
-        this->config->save();
-        return;
-    }
-
-    if (command.startsWith("showconfigs="))
-    {
-        String field = command.substring(12);
-        String value = this->config->get<String>(field.c_str());
-
-        this->publish(debug_response_topic, value);
-        mdebugD("config %s = %s", field.c_str(), value.c_str());
-        return;
-    }
-
-    if (command.startsWith("showconfigi="))
-    {
-        String field = command.substring(12);
-        int value = this->config->get<int>(field.c_str());
-
-        this->publish(debug_response_topic, value);
-        mdebugD("config %s = %i", field.c_str(), value);
-        return;
-    }
-
-    if (command.startsWith("showconfigf="))
-    {
-        String field = command.substring(12);
-        float value = this->config->get<float>(field.c_str());
-
-        this->publish(debug_response_topic, value);
-        mdebugD("config %s = %f", field.c_str(), value);
-        return;
-    }
-
-    if (command.startsWith("setconfigs="))
-    {
-        String param = command.substring(11);
-
-        String field = param.substring(0, param.indexOf('|'));
-        String value = param.substring(param.indexOf('|') + 1);
-
-        mdebugD("Setting configuration: field: %s, new value: %s", field.c_str(), value.c_str());
-
-        this->config->set(field.c_str(), value);
-
-        return;
-    }
-
-    if (command.startsWith("setconfigi="))
-    {
-        String param = command.substring(11);
-
-        String field = param.substring(0, param.indexOf('|'));
-        String value = param.substring(param.indexOf('|') + 1);
-
-        mdebugD("Setting configuration: field: %s, new value: %d", field.c_str(), value.toInt());
-
-        this->config->set(field.c_str(), (int)(value.toInt()));
-
-        return;
-    }
-
-    if (command.startsWith("setconfigf="))
-    {
-        String param = command.substring(11);
-
-        String field = param.substring(0, param.indexOf('|'));
-        String value = param.substring(param.indexOf('|') + 1);
-
-        mdebugD("Setting configuration: field: %s, new value: %f", field.c_str(), value.toFloat());
-
-        this->config->set(field.c_str(), value.toFloat());
-
-        return;
-    }
-
-    if (command.startsWith("setdebuglevel="))
-    {
-        long level = command.substring(14).toInt();
+        long level = param.toInt();
         this->setLogLevel((LogLevel)(int)level);
         return;
     }
 
+    // now try passing to the services
+    for (auto &service : this->services)
+    {
+        if (service.second->command(command, param))
+            return;
+    }
+
+    // if they were not handled, pass to the custom command handler
     if (this->onCommand != nullptr)
     {
         mdebugV("Passing command to custom command handler");
-        this->onCommand(command);
+        this->onCommand(command, param);
     }
 }
 
