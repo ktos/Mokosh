@@ -102,11 +102,15 @@ public:
     // returns internal PubSubClient instance
     PubSubClient *getPubSubClient();
 
-    // prints message of a desired debug level to RemoteDebug
+    // prints message of a desired debug level to all debug adapters
     // uses func parameter to be used with __func__ so there will
     // be printed in what function debug happened
-    // use rather mdebug() macros instead
+    // use rather mdebug() macros instead of direct usage of this function
     static void debug(LogLevel level, const char *func, const char *file, int line, const char *fmt, ...);
+
+    // prints to the debug adapters the "busy" indicator
+    static void debug_ticker_step();
+    static void debug_ticker_finish(bool success);
 
     // enables automatic reboot on error - by default there will be
     // an inifinite loop instead
@@ -261,7 +265,6 @@ public:
     }
 
 private:
-    bool debugReady;
     String hostName;
     char hostNameC[32];
     String prefix;

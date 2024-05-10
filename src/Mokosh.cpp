@@ -12,7 +12,6 @@ void _mqtt_callback(char *topic, uint8_t *message, unsigned int length)
 Mokosh::Mokosh(String prefix, String version, bool useFilesystem, bool useSerial)
 {
     _instance = this;
-    Mokosh::debugReady = false;
 
     this->version = version;
 
@@ -85,6 +84,22 @@ void Mokosh::debug(LogLevel level, const char *func, const char *file, int line,
         {
             adapter->debugf(level, func, file, line, millis(), dest);
         }
+    }
+}
+
+void Mokosh::debug_ticker_step()
+{
+    for (auto &adapter : Mokosh::debugAdapters)
+    {
+        adapter->ticker_step();
+    }
+}
+
+void Mokosh::debug_ticker_finish(bool success)
+{
+    for (auto &adapter : Mokosh::debugAdapters)
+    {
+        adapter->ticker_finish(success);
     }
 }
 
@@ -406,7 +421,7 @@ wl_status_t Mokosh::connectWifi()
         unsigned long startTime = millis();
         while (WiFi.status() != WL_CONNECTED && millis() - startTime < 10000)
         {
-            Serial.print(".");
+            debug_ticker_step();
             delay(250);
         }
     }
@@ -426,11 +441,11 @@ wl_status_t Mokosh::connectWifi()
 
     if (lastWifiStatus == WL_CONNECTED)
     {
-        Serial.println(" ok");
+        debug_ticker_finish(true);
     }
     else
     {
-        Serial.println(" fail");
+        debug_ticker_finish(false);
     }
 
     return lastWifiStatus;
@@ -445,9 +460,9 @@ Mokosh *Mokosh::setLogLevel(LogLevel level)
 {
     this->debugLevel = level;
 
-    if (this->debugReady)
+    for (auto &debug : this->debugAdapters)
     {
-        mdebugW("Setting mdebug level should be before begin(), ignoring for internals.");
+        debug->setActive(level);
     }
 
     return this;
@@ -744,16 +759,12 @@ void Mokosh::error(int code)
         else
         {
             mdebugE("Unhandled error, code: %d, going loop.", code);
-            if (this->debugReady)
+            if (isWifiConnected())
             {
                 if (this->client->connected() && this->mqtt->state() == MQTT_CONNECTED)
                 {
                     this->publish(this->heartbeat_topic, "error_loop", true);
                 }
-            }
-            else
-            {
-                Serial.print("Going loop.");
             }
 
             while (true)

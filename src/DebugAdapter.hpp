@@ -21,6 +21,8 @@ public:
     virtual bool isActive(LogLevel level) = 0;
     virtual void setActive(LogLevel level) = 0;
     virtual void debugf(LogLevel level, const char *func, const char *file, int line, long time, const char *msg) = 0;
+    virtual void ticker_step() = 0;
+    virtual void ticker_finish(bool success) = 0;
 };
 
 class SerialDebugAdapter : public DebugAdapter
@@ -65,6 +67,23 @@ public:
         }
 
         Serial.printf("(%c t:%ldms) (%s %s:%d) %s\n", lvl, time, func, file, line, msg);
+    }
+
+    virtual void ticker_step() override
+    {
+        Serial.print(".");
+    }
+
+    virtual void ticker_finish(bool success) override
+    {
+        if (success)
+        {
+            Serial.println(" ok");
+        }
+        else
+        {
+            Serial.println(" fail");
+        }
     }
 };
 
