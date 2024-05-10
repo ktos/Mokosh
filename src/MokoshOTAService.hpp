@@ -2,6 +2,7 @@
 #define OTASERVICE_H
 
 #include "MokoshService.hpp"
+#include <ArduinoOTA.h>
 #include <Arduino.h>
 #include <memory>
 #include <Mokosh.hpp>
@@ -19,18 +20,18 @@ namespace MokoshServices
         {
             uint16_t otaPort = 3232;
 #if defined(ESP8266)
-            otaPort = this->config.get<int>(this->config.key_ota_port, 8266);
+            otaPort = this->config->get<int>(this->config.key_ota_port, 8266);
 #endif
 
 #if defined(ESP32)
-            otaPort = mokosh->config.get<int>(mokosh->config.key_ota_port, 3232);
+            otaPort = mokosh->config->get<int>(mokosh->config->key_ota_port, 3232);
 #endif
 
             mdebugV("OTA is enabled. OTA port: %d", otaPort);
             ArduinoOTA.setPort(otaPort);
             ArduinoOTA.setHostname(mokosh->getHostName().c_str());
 
-            String hash = mokosh->config.get<String>(mokosh->config.key_ota_password);
+            String hash = mokosh->config->get<String>(mokosh->config->key_ota_password);
             if (hash != "")
                 ArduinoOTA.setPasswordHash(hash.c_str());
 
@@ -89,6 +90,8 @@ namespace MokoshServices
             moc.onError(error); });
 
             ArduinoOTA.begin();
+
+            return true;
         }
 
         virtual std::vector<const char *> getDependencies()

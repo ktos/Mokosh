@@ -13,7 +13,6 @@
 #include <WiFiMulti.h>
 #endif
 
-#include <ArduinoOTA.h>
 #include <PubSubClient.h>
 #include <RemoteDebug.h>
 #include <TickTwo.h>
@@ -70,22 +69,20 @@ enum MokoshErrors
 class Mokosh
 {
 public:
-    Mokosh();
+    // creates a new instance of a Mokosh framework object
+    // optionally sets up config file - if not set, in RAM will be used
+    Mokosh(String prefix = "Mokosh", String version = "1.0.0", bool useConfigFile = true);
+
     // sets debug level verbosity, must be called before begin()
     Mokosh *setLogLevel(LogLevel level);
 
     // starts Mokosh system, connects to the Wi-Fi and MQTT
-    // using the provided device prefix
-    void begin(String prefix, bool autoconnect = true);
+    // using the provided device prefix, sets up all registered services
+    void begin(bool autoconnect = true);
 
     // handles MQTT, interval and RemoteDebug loops, must be called
     // in loop()
     void loop();
-
-    // sets build information (SemVer and build date) used in the
-    // responses to getv and getfullver commands and hello message
-    // must be called before begin()
-    Mokosh *setBuildMetadata(String version, String buildDate = "1970-01-01");
 
     // registers a MokoshService
     // if called after begin(), the service will be set up immediately
@@ -116,13 +113,6 @@ public:
     // be printed in what function debug happened
     // use rather mdebug() macros instead
     static void debug(LogLevel level, const char *func, const char *file, int line, const char *fmt, ...);
-
-    // disables LittleFS and config.json support (enabled by default)
-    // must be called before begin()
-    Mokosh *setConfigFile(bool value);
-
-    // enables FirstRun subsystem if there is no config.json (disabled by default)
-    Mokosh *setFirstRun(bool value);
 
     // enables automatic reboot on error - by default there will be
     // an inifinite loop instead
@@ -155,11 +145,6 @@ public:
 
     // removes config.json and reboots, entering FirstRun mode
     void factoryReset();
-
-    // initializes FS and loads config file
-    // is done automatically by begin(), but it can be run earlier
-    // if access to config is needed before begin()
-    void initializeFS();
 
     // the name of subtopic used for commands
     const char *cmd_topic = "cmd";
@@ -235,7 +220,7 @@ public:
     Mokosh *setCustomClient(Client &client);
 
     // a configuration object to set and read configs
-    MokoshConfig config;
+    std::shared_ptr<MokoshConfig> config;
 
     // returns defined device prefix
     String getPrefix();
@@ -288,7 +273,6 @@ private:
     char hostNameC[32];
     String prefix;
     String version = "1.0.0";
-    String buildDate = "1970-01-01";
 
     Client *client;
     PubSubClient *mqtt;

@@ -9,10 +9,61 @@ void _mqtt_callback(char *topic, uint8_t *message, unsigned int length)
 
 RemoteDebug Debug;
 
-Mokosh::Mokosh()
+Mokosh::Mokosh(String prefix, String version, bool useConfigFile)
 {
     _instance = this;
     Mokosh::debugReady = false;
+
+    this->version = version;
+
+    Serial.begin(115200);
+    Serial.println();
+    Serial.println();
+    Serial.print("Hi, I'm ");
+    Serial.print(prefix);
+    Serial.println(".");
+
+    char hostString[16] = {0};
+#if defined(ESP8266)
+    sprintf(hostString, "%06X", ESP.getChipId());
+#endif
+
+#if defined(ESP32)
+    // strange bit manipulations to extract only 24 bits of MAC
+    // like in ESP8266
+    uint32_t chipId = 0;
+    for (int i = 0; i < 17; i = i + 8)
+    {
+        chipId |= ((ESP.getEfuseMac() >> (40 - i)) & 0xff) << i;
+    }
+
+    sprintf(hostString, "%06X", chipId);
+#endif
+
+    lastWifiStatus = WiFi.status();
+
+    this->prefix = prefix;
+    this->hostName = String(hostString);
+
+#ifdef OVERRIDE_HOSTNAME
+    this->hostName = OVERRIDE_HOSTNAME;
+#endif
+
+    strcpy(this->hostNameC, hostName.c_str());
+
+#ifndef OVERRIDE_HOSTNAME
+    mdebugD("ID: %s", hostString);
+#else
+    mdebugD("ID: %s, overridden to %s", hostString, OVERRIDE_HOSTNAME);
+#endif
+
+    // config service is set up in the beginning, and immediately
+    this->registerService(MokoshConfig::KEY, std::make_shared<MokoshConfig>(useConfigFile));
+    this->config = this->getRegisteredService<MokoshConfig>(MokoshConfig::KEY);
+    if (!this->config->setup(std::make_shared<Mokosh>(*this)))
+    {
+        mdebugE("Configuration system error!");
+    }
 }
 
 void Mokosh::debug(LogLevel level, const char *func, const char *file, int line, const char *fmt, ...)
@@ -64,13 +115,13 @@ bool Mokosh::isDebugReady()
 bool Mokosh::configureMqttClient()
 {
     IPAddress broker;
-    String brokerAddress = this->config.get<String>(this->config.key_broker);
+    String brokerAddress = this->config->get<String>(this->config->key_broker);
     if (brokerAddress == "")
     {
         mdebugE("MQTT configuration is not provided!");
         return false;
     }
-    uint16_t brokerPort = this->config.get<int>(this->config.key_broker_port, 1883);
+    uint16_t brokerPort = this->config->get<int>(this->config->key_broker_port, 1883);
 
     // it it is an IP address
     if (broker.fromString(brokerAddress))
@@ -169,69 +220,13 @@ void Mokosh::initializeTickers()
     }
 }
 
-void Mokosh::initializeFS()
-{
-    if (this->isFSEnabled)
-    {
-        if (!this->config.prepareFS())
-        {
-            this->error(MokoshErrors::FileSystemNotAvailable);
-        }
-
-        this->config.reload();
-    }
-}
-
 String Mokosh::getVersion()
 {
     return this->version;
 }
 
-void Mokosh::begin(String prefix, bool autoconnect)
+void Mokosh::begin(bool autoconnect)
 {
-    Serial.begin(115200);
-    Serial.println();
-    Serial.println();
-    Serial.print("Hi, I'm ");
-    Serial.print(prefix);
-    Serial.println(".");
-
-    char hostString[16] = {0};
-#if defined(ESP8266)
-    sprintf(hostString, "%06X", ESP.getChipId());
-#endif
-
-#if defined(ESP32)
-    // strange bit manipulations to extract only 24 bits of MAC
-    // like in ESP8266
-    uint32_t chipId = 0;
-    for (int i = 0; i < 17; i = i + 8)
-    {
-        chipId |= ((ESP.getEfuseMac() >> (40 - i)) & 0xff) << i;
-    }
-
-    sprintf(hostString, "%06X", chipId);
-#endif
-
-    lastWifiStatus = WiFi.status();
-
-    this->prefix = prefix;
-    this->hostName = String(hostString);
-
-#ifdef OVERRIDE_HOSTNAME
-    this->hostName = OVERRIDE_HOSTNAME;
-#endif
-
-    strcpy(this->hostNameC, hostName.c_str());
-
-#ifndef OVERRIDE_HOSTNAME
-    mdebugD("ID: %s", hostString);
-#else
-    mdebugD("ID: %s, overridden to %s", hostString, OVERRIDE_HOSTNAME);
-#endif
-
-    initializeFS();
-
     if (autoconnect)
     {
         this->connectWifi();
@@ -283,18 +278,6 @@ void Mokosh::publishIP()
     }
 }
 
-Mokosh *Mokosh::setConfigFile(bool value)
-{
-    if (this->isAfterBegin)
-    {
-        mdebugE("Must be called before begin()");
-        return this;
-    }
-
-    this->isFSEnabled = value;
-    return this;
-}
-
 bool Mokosh::reconnect()
 {
     if (this->mqtt->connected())
@@ -335,8 +318,8 @@ bool Mokosh::reconnect()
         trials++;
 
         String clientId = this->hostName;
-        if (this->config.hasKey(this->config.key_client_id))
-            clientId = this->config.get<String>(this->config.key_client_id, this->hostName);
+        if (this->config->hasKey(this->config->key_client_id))
+            clientId = this->config->get<String>(this->config->key_client_id, this->hostName);
 
         if (this->mqtt->connect(clientId.c_str()))
         {
@@ -411,7 +394,7 @@ wl_status_t Mokosh::connectWifi()
     WiFi.mode(WIFI_MODE_NULL);
     WiFi.setHostname(fullHostName);
 
-    bool multi = this->config.hasKey(this->config.key_multi_ssid);
+    bool multi = this->config->hasKey(this->config->key_multi_ssid);
 #else
     bool multi = false;
 #endif
@@ -420,7 +403,7 @@ wl_status_t Mokosh::connectWifi()
 #if defined(ESP32)
         WiFiMulti wifiMulti;
 
-        String multi = this->config.get<String>(this->config.key_multi_ssid, "");
+        String multi = this->config->get<String>(this->config->key_multi_ssid, "");
         mdebugV("Will try multiple SSID");
 
         StaticJsonDocument<256> doc;
@@ -449,8 +432,8 @@ wl_status_t Mokosh::connectWifi()
     }
     else
     {
-        String ssid = this->config.get<String>(this->config.key_ssid, "");
-        String password = this->config.get<String>(this->config.key_wifi_password);
+        String ssid = this->config->get<String>(this->config->key_ssid, "");
+        String password = this->config->get<String>(this->config->key_wifi_password);
 
         if (ssid == "")
         {
@@ -551,7 +534,7 @@ void Mokosh::loop()
 
 void Mokosh::factoryReset()
 {
-    this->config.removeFile();
+    this->config->removeFile();
     ESP.restart();
 }
 
@@ -614,14 +597,6 @@ void Mokosh::_processCommand(String command)
         return;
     }
 
-    if (command == "getbuilddate")
-    {
-        mdebugD("Build date: %s", this->buildDate.c_str());
-        this->publish(debug_response_topic, this->buildDate);
-
-        return;
-    }
-
     if (command == "reboot")
     {
         ESP.restart();
@@ -640,7 +615,7 @@ void Mokosh::_processCommand(String command)
     if (command == "reloadconfig")
     {
         mdebugI("Config reload initiated");
-        this->config.reload();
+        this->config->reloadFromFile();
 
         return;
     }
@@ -656,14 +631,14 @@ void Mokosh::_processCommand(String command)
     if (command == "saveconfig")
     {
         mdebugD("Config saved");
-        this->config.save();
+        this->config->save();
         return;
     }
 
     if (command.startsWith("showconfigs="))
     {
         String field = command.substring(12);
-        String value = this->config.get<String>(field.c_str());
+        String value = this->config->get<String>(field.c_str());
 
         this->publish(debug_response_topic, value);
         mdebugD("config %s = %s", field.c_str(), value.c_str());
@@ -673,7 +648,7 @@ void Mokosh::_processCommand(String command)
     if (command.startsWith("showconfigi="))
     {
         String field = command.substring(12);
-        int value = this->config.get<int>(field.c_str());
+        int value = this->config->get<int>(field.c_str());
 
         this->publish(debug_response_topic, value);
         mdebugD("config %s = %i", field.c_str(), value);
@@ -683,7 +658,7 @@ void Mokosh::_processCommand(String command)
     if (command.startsWith("showconfigf="))
     {
         String field = command.substring(12);
-        float value = this->config.get<float>(field.c_str());
+        float value = this->config->get<float>(field.c_str());
 
         this->publish(debug_response_topic, value);
         mdebugD("config %s = %f", field.c_str(), value);
@@ -699,7 +674,7 @@ void Mokosh::_processCommand(String command)
 
         mdebugD("Setting configuration: field: %s, new value: %s", field.c_str(), value.c_str());
 
-        this->config.set(field.c_str(), value);
+        this->config->set(field.c_str(), value);
 
         return;
     }
@@ -713,7 +688,7 @@ void Mokosh::_processCommand(String command)
 
         mdebugD("Setting configuration: field: %s, new value: %d", field.c_str(), value.toInt());
 
-        this->config.set(field.c_str(), (int)(value.toInt()));
+        this->config->set(field.c_str(), (int)(value.toInt()));
 
         return;
     }
@@ -727,7 +702,7 @@ void Mokosh::_processCommand(String command)
 
         mdebugD("Setting configuration: field: %s, new value: %f", field.c_str(), value.toFloat());
 
-        this->config.set(field.c_str(), value.toFloat());
+        this->config->set(field.c_str(), value.toFloat());
 
         return;
     }
@@ -907,19 +882,6 @@ Mokosh *Mokosh::setRebootOnError(bool value)
     return this;
 }
 
-Mokosh *Mokosh::setBuildMetadata(String version, String buildDate)
-{
-    if (this->isAfterBegin)
-    {
-        mdebugE("Must be called before begin()");
-        return this;
-    }
-
-    this->version = version;
-    this->buildDate = buildDate;
-    return this;
-}
-
 Mokosh *Mokosh::setIgnoreConnectionErrors(bool value)
 {
     this->isIgnoringConnectionErrors = value;
@@ -1005,7 +967,9 @@ bool Mokosh::setupService(const char *key, std::shared_ptr<MokoshService> servic
         }
     }
 
-    service->setup(std::make_shared<Mokosh>(*this));
+    // services are not being setup more than once
+    if (!service->isSetup())
+        service->setup(std::make_shared<Mokosh>(*this));
 
     return true;
 }
@@ -1017,8 +981,7 @@ void Mokosh::setupServices()
         auto key = service.first;
         auto value = service.second;
 
-        if (!value->isSetup())
-            setupService(key, value);
+        setupService(key, value);
     }
 }
 

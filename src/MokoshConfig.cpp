@@ -1,6 +1,13 @@
 #include "MokoshConfig.hpp"
 #include "Mokosh.hpp"
 
+const char *MokoshConfig::KEY = "CONFIG";
+
+MokoshConfig::MokoshConfig(bool useFile)
+{
+    this->useFile = useFile;
+}
+
 bool MokoshConfig::isConfigurationSet()
 {
     return this->get<String>("ssid") != "";
@@ -42,13 +49,19 @@ void MokoshConfig::set(const char *field, float value)
 
 void MokoshConfig::save()
 {
+    if (!this->useFile)
+        return;
+
     mdebugV("Saving config.json");
     File configFile = LittleFS.open("/config.json", "w");
     serializeJson(this->config, configFile);
 }
 
-bool MokoshConfig::reload()
+bool MokoshConfig::reloadFromFile()
 {
+    if (!this->useFile)
+        return true;
+
     mdebugV("Reloading config.json");
     File configFile = LittleFS.open("/config.json", "r");
 
@@ -77,17 +90,31 @@ bool MokoshConfig::hasKey(const char *field)
 
 void MokoshConfig::removeFile()
 {
+    if (!this->useFile)
+        return;
+
     mdebugV("Removing config.json");
     LittleFS.remove("/config.json");
 }
 
-bool MokoshConfig::prepareFS()
+// sets up the configuration system
+bool MokoshConfig::setup(std::shared_ptr<Mokosh> mokosh)
 {
+    if (!this->useFile)
+        return true;
+
     if (!LittleFS.begin())
     {
         if (!LittleFS.format())
             return false;
     }
 
+    if (this->useFile)
+        this->reloadFromFile();
+
     return true;
+}
+
+void MokoshConfig::loop()
+{
 }
