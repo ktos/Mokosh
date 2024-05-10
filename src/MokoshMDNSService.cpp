@@ -11,6 +11,8 @@
 
 namespace MokoshServices
 {
+    const char *MDNSService::KEY = "MDNS";
+
     bool MDNSService::setup(std::shared_ptr<Mokosh> mokosh)
     {
         if (!MDNS.begin(mokosh->getHostNameWithPrefix()))

@@ -104,10 +104,7 @@ namespace MokoshServices
         // event handlers for OTA situations (onStart, onEnd, etc.)
         MokoshOTAHandlers otaEvents;
 
-        virtual const char *getDefaultKey()
-        {
-            return "OTA";
-        }
+        static const char *KEY;
 
     private:
         bool isOTAInProgress = false;

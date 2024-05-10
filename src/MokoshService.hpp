@@ -34,9 +34,6 @@ public:
         return {};
     }
 
-    // returns the default key at which the class should be registered
-    virtual const char *getDefaultKey() = 0;
-
     // loop, run internally by Mokosh:loop()
     virtual void loop() = 0;
 
