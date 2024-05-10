@@ -9,8 +9,6 @@ void _mqtt_callback(char *topic, uint8_t *message, unsigned int length)
     _instance->_mqttCommandReceived(topic, message, length);
 }
 
-RemoteDebug Debug;
-
 Mokosh::Mokosh(String prefix, String version, bool useFilesystem, bool useSerial)
 {
     _instance = this;
@@ -88,38 +86,6 @@ void Mokosh::debug(LogLevel level, const char *func, const char *file, int line,
             adapter->debugf(level, func, file, line, millis(), dest);
         }
     }
-
-    // if (!_instance->isDebugReady())
-    // {
-    //     char lvl;
-    //     switch (level)
-    //     {
-    //     case LogLevel::DEBUG:
-    //         lvl = 'D';
-    //         break;
-    //     case LogLevel::ERROR:
-    //         lvl = 'E';
-    //         break;
-    //     case LogLevel::INFO:
-    //         lvl = 'I';
-    //         break;
-    //     case LogLevel::WARNING:
-    //         lvl = 'W';
-    //         break;
-    //     case LogLevel::VERBOSE:
-    //         lvl = 'V';
-    //         break;
-    //     default:
-    //         lvl = 'A';
-    //     }
-
-    //     Serial.printf("L (%c t:%ldms) (%s %s:%d) %s\n", lvl, millis(), func, file, line, dest);
-    // }
-
-    // if (Debug.isActive((uint8_t)level))
-    // {
-    //     Debug.printf("(%s %s:%d) %s\n", func, file, line, dest);
-    // }
 }
 
 bool Mokosh::configureMqttClient()
@@ -149,23 +115,6 @@ bool Mokosh::configureMqttClient()
     this->isMqttConfigured = true;
     return true;
 }
-
-void handleRemoteDebugCommand()
-{
-    String cmd = Debug.getLastCommand();
-    _instance->_processCommand(cmd);
-}
-
-// void Mokosh::setupRemoteDebug()
-// {
-//     Debug.begin(this->hostName, (uint8_t)this->debugLevel);
-//     Debug.setSerialEnabled(true);
-//     Debug.setResetCmdEnabled(true);
-//     Debug.showTime(true);
-//     Debug.setCallBackProjectCmds(handleRemoteDebugCommand);
-
-//     this->debugReady = true;
-// }
 
 void Mokosh::setupWiFiClient()
 {
@@ -538,13 +487,12 @@ void Mokosh::loop()
     {
         service.second->loop();
     }
-
-    Debug.handle();
 }
 
 void Mokosh::factoryReset()
 {
-    this->config->removeConfigFile();
+    mdebugI("Factory reset initialized");
+    LittleFS.format();
     ESP.restart();
 }
 
@@ -626,9 +574,7 @@ void Mokosh::_processCommand(String command)
 
     if (command == "factory")
     {
-        mdebugW("Factory reset initiated");
-        LittleFS.format();
-
+        this->factoryReset();
         return;
     }
 
@@ -774,11 +720,12 @@ void Mokosh::publish(const char *subtopic, float payload)
 
 void Mokosh::error(int code)
 {
-    if (!this->debugReady)
+    if (this->debugAdapters.size() == 0)
     {
+        Serial.begin(115200);
         Serial.print("Critical error: ");
         Serial.print(code);
-        Serial.println(", debug not ready.");
+        Serial.println(", no debug adapters.");
     }
 
     if (this->onError != nullptr)
