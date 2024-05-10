@@ -51,10 +51,10 @@ public:
 
     // some built-in names for dependencies
 
-    // this service is dependent on the network connection
+    // marks this service is dependent on the network connection
     static const char *DEPENDENCY_NETWORK;
 
-    // this service is dependent on the MQTT connection
+    // marks this service is dependent on the MQTT connection
     static const char *DEPENDENCY_MQTT;
 
 protected:

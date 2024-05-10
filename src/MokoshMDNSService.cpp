@@ -29,6 +29,11 @@ namespace MokoshServices
         return true;
     }
 
+    const char *key()
+    {
+        return MDNSService::KEY;
+    }
+
     void MDNSService::addMDNSService(const char *service, const char *proto, uint16_t port)
     {
         MDNS.addService(service, proto, port);
