@@ -3,9 +3,9 @@
 
 const char *MokoshConfig::KEY = "CONFIG";
 
-MokoshConfig::MokoshConfig(bool useFile)
+MokoshConfig::MokoshConfig(bool useFileSystem)
 {
-    this->useFile = useFile;
+    this->useFileSystem = useFileSystem;
 }
 
 bool MokoshConfig::isConfigurationSet()
@@ -49,7 +49,7 @@ void MokoshConfig::set(const char *field, float value)
 
 void MokoshConfig::save()
 {
-    if (!this->useFile)
+    if (!this->useFileSystem)
         return;
 
     mdebugV("Saving config.json");
@@ -59,7 +59,7 @@ void MokoshConfig::save()
 
 bool MokoshConfig::reloadFromFile()
 {
-    if (!this->useFile)
+    if (!this->useFileSystem)
         return true;
 
     mdebugV("Reloading config.json");
@@ -90,7 +90,7 @@ bool MokoshConfig::hasKey(const char *field)
 
 void MokoshConfig::removeFile()
 {
-    if (!this->useFile)
+    if (!this->useFileSystem)
         return;
 
     mdebugV("Removing config.json");
@@ -100,7 +100,7 @@ void MokoshConfig::removeFile()
 // sets up the configuration system
 bool MokoshConfig::setup(std::shared_ptr<Mokosh> mokosh)
 {
-    if (!this->useFile)
+    if (!this->useFileSystem)
         return true;
 
     if (!LittleFS.begin())
@@ -109,7 +109,7 @@ bool MokoshConfig::setup(std::shared_ptr<Mokosh> mokosh)
             return false;
     }
 
-    if (this->useFile)
+    if (this->useFileSystem)
         this->reloadFromFile();
 
     return true;

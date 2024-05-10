@@ -18,7 +18,7 @@ public:
     const char *key_multi_ssid = "ssids";
     const char *key_client_id = "mqttClientId";
 
-    MokoshConfig(bool useFile = true);
+    MokoshConfig(bool useFileSystem = true);
 
     template <typename T>
     // reads a given field from config.json
@@ -79,7 +79,7 @@ public:
 
 private:
     StaticJsonDocument<1024> config;
-    bool useFile;
+    bool useFileSystem;
 };
 
 #endif

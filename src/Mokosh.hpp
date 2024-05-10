@@ -71,7 +71,7 @@ class Mokosh
 public:
     // creates a new instance of a Mokosh framework object
     // optionally sets up config file - if not set, in RAM will be used
-    Mokosh(String prefix = "Mokosh", String version = "1.0.0", bool useConfigFile = true);
+    Mokosh(String prefix = "Mokosh", String version = "1.0.0", bool useFilesystem = true);
 
     // sets debug level verbosity, must be called before begin()
     Mokosh *setLogLevel(LogLevel level);

@@ -9,7 +9,7 @@ void _mqtt_callback(char *topic, uint8_t *message, unsigned int length)
 
 RemoteDebug Debug;
 
-Mokosh::Mokosh(String prefix, String version, bool useConfigFile)
+Mokosh::Mokosh(String prefix, String version, bool useFilesystem)
 {
     _instance = this;
     Mokosh::debugReady = false;
@@ -58,7 +58,7 @@ Mokosh::Mokosh(String prefix, String version, bool useConfigFile)
 #endif
 
     // config service is set up in the beginning, and immediately
-    this->registerService(MokoshConfig::KEY, std::make_shared<MokoshConfig>(useConfigFile));
+    this->registerService(MokoshConfig::KEY, std::make_shared<MokoshConfig>(useFilesystem));
     this->config = this->getRegisteredService<MokoshConfig>(MokoshConfig::KEY);
     if (!this->config->setup(std::make_shared<Mokosh>(*this)))
     {
