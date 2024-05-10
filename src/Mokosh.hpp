@@ -77,9 +77,11 @@ public:
     // if called after begin(), the service will be set up immediately
     // and if not, in a setup phase of the services
     Mokosh *registerService(const char *key, std::shared_ptr<MokoshService> service);
+    Mokosh *registerService(std::shared_ptr<MokoshService> service);
 
     // registers a debug adapter
     Mokosh *registerDebugAdapter(const char *key, std::shared_ptr<DebugAdapter> service);
+    Mokosh *registerDebugAdapter(std::shared_ptr<DebugAdapter> service);
 
     // publishes a new message on a Prefix_ABCDE/subtopic topic with
     // a given payload

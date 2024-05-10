@@ -809,6 +809,11 @@ bool isDependentOn(std::shared_ptr<MokoshService> service, const char *key)
     return (it != service->getDependencies().end());
 }
 
+Mokosh *Mokosh::registerService(std::shared_ptr<MokoshService> service)
+{
+    return this->registerService(String(random(1, 100), HEX).c_str(), service);
+}
+
 Mokosh *Mokosh::registerService(const char *key, std::shared_ptr<MokoshService> service)
 {
     this->services[key] = service;
@@ -820,6 +825,11 @@ Mokosh *Mokosh::registerService(const char *key, std::shared_ptr<MokoshService> 
     }
 
     return this;
+}
+
+Mokosh *Mokosh::registerDebugAdapter(std::shared_ptr<DebugAdapter> service)
+{
+    return this->registerDebugAdapter(String(random(1, 100), HEX).c_str(), service);
 }
 
 Mokosh *Mokosh::registerDebugAdapter(const char *key, std::shared_ptr<DebugAdapter> service)
