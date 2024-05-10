@@ -1026,8 +1026,3 @@ bool Mokosh::isServiceRegistered(const char *key)
 {
     return this->services.find(key) != this->services.end();
 }
-
-std::shared_ptr<MokoshService> Mokosh::getRegisteredService(const char *key)
-{
-    return this->services[key];
-}

@@ -275,8 +275,12 @@ public:
     // checks if the service with a given name is registered
     bool isServiceRegistered(const char *key);
 
-    // returns a service by a name
-    std::shared_ptr<MokoshService> getRegisteredService(const char *key);
+    // returns a service by a name and downcast to the specified type
+    template <typename T>
+    std::shared_ptr<T> getRegisteredService(const char *key)
+    {
+        return std::static_pointer_cast<T>(this->services[key]);
+    }
 
 private:
     bool debugReady;
