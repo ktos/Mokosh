@@ -18,6 +18,8 @@
 #include <RemoteDebug.h>
 #include <TickTwo.h>
 #include <vector>
+#include <map>
+#include <algorithm>
 
 #include "MokoshConfig.hpp"
 #include "MokoshHandlers.hpp"
@@ -85,12 +87,10 @@ public:
     // must be called before begin()
     Mokosh *setBuildMetadata(String version, String buildDate = "1970-01-01");
 
-    // enables MDNS service (default false, unless OTA is enabled)
-    Mokosh *setMDNS(bool value);
-
     // registers a MokoshService
-    // must be called before begin()
-    Mokosh *registerService(std::shared_ptr<MokoshService> service, bool isWiFiDependent);
+    // if called after begin(), the service will be set up immediately
+    // and if not, in a setup phase of the services
+    Mokosh *registerService(const char *key, std::shared_ptr<MokoshService> service);
 
     // publishes a new message on a Prefix_ABCDE/subtopic topic with
     // a given payload
@@ -116,10 +116,6 @@ public:
     // be printed in what function debug happened
     // use rather mdebug() macros instead
     static void debug(LogLevel level, const char *func, const char *file, int line, const char *fmt, ...);
-
-    // enables ArduinoOTA subsystem (disabled by default)
-    // must be called before begin()
-    Mokosh *setOta(bool value);
 
     // disables LittleFS and config.json support (enabled by default)
     // must be called before begin()
@@ -190,9 +186,6 @@ public:
     // this is a PRIVATE function, exposed only as a workaround
     void _processCommand(String command);
 
-    // event handlers for OTA situations (onStart, onEnd, etc.)
-    MokoshOTAHandlers otaEvents;
-
     // event handlers for Wi-Fi situations (onConnect, onDisconnect)
     MokoshWiFiHandlers wifiEvents;
 
@@ -223,10 +216,6 @@ public:
     // sends "hello" packet with version number and sets up heartbeat
     // is being automatically run on begin() if autoconnect is true
     void hello();
-
-    // sets up OTA in Wi-Fi networks
-    // is being automatically run on begin() if autoconnect is true
-    void setupOta();
 
     // sets up Wi-Fi client
     // is being automatically run on begin() if autoconnect is true
@@ -273,13 +262,18 @@ public:
     // returns a version string registered before build()
     String getVersion();
 
-    // sets up all services which depend on Wi-Fi
-    // will be run automatically during begin() if Wi-Fi is configured
-    void setupWiFiDependentServices();
-
-    // sets up all other registered services
+    // sets up all registered services
     // will be run automatically during begin()
     void setupServices();
+
+    // sets up a single service with dependency resolution
+    bool setupService(const char *key, std::shared_ptr<MokoshService> service);
+
+    // checks if the service with a given name is registered
+    bool isServiceRegistered(const char *key);
+
+    // returns a service by a name
+    std::shared_ptr<MokoshService> getRegisteredService(const char *key);
 
 private:
     bool debugReady;
@@ -295,7 +289,6 @@ private:
     bool isFSEnabled = true;
     bool isRebootOnError = false;
     bool isOTAEnabled = false;
-    bool isMDNSEnabled = false;
     bool isOTAInProgress = false;
     bool isMqttConfigured = false;
     bool isIgnoringConnectionErrors = false;
@@ -322,8 +315,7 @@ private:
     char ssid[16] = {0};
 
     std::vector<std::shared_ptr<TickTwo>> tickers;
-    std::vector<std::shared_ptr<MokoshService>> services;
-    std::vector<std::shared_ptr<MokoshService>> wifiDependentServices;
+    std::map<const char *, std::shared_ptr<MokoshService>> services;
 };
 
 #include "MokoshResilience.hpp"

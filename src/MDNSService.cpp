@@ -36,4 +36,8 @@ namespace MokoshServices
     {
         MDNS.addServiceTxt(service, proto, property, value);
     }
+
+    void MDNSService::loop()
+    {
+    }
 }

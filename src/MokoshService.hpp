@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include <memory>
+#include <vector>
 
 class Mokosh;
 
@@ -18,6 +19,21 @@ public:
     {
         return this->setupReady;
     }
+
+    virtual std::vector<const char *> getDependencies()
+    {
+        return {};
+    }
+
+    virtual void loop() = 0;
+
+    // some built-in names for dependencies
+
+    // this service is dependent on the network connection
+    static const char *DEPENDENCY_NETWORK;
+
+    // this service is dependent on the MQTT connection
+    static const char *DEPENDENCY_MQTT;
 
 protected:
     bool setupReady = false;

@@ -4,6 +4,7 @@
 #include "MokoshService.hpp"
 #include <Arduino.h>
 #include <memory>
+#include <vector>
 
 namespace MokoshServices
 {
@@ -21,6 +22,13 @@ namespace MokoshServices
 
         // adds broadcasted MDNS service props
         void addMDNSServiceProps(const char *service, const char *proto, const char *property, const char *value);
+
+        virtual void loop() override;
+
+        virtual std::vector<const char *> getDependencies() override
+        {
+            return {MokoshService::DEPENDENCY_NETWORK};
+        }
     };
 }
 

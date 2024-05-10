@@ -139,82 +139,6 @@ void Mokosh::setupMqttClient()
     }
 }
 
-void Mokosh::setupOta()
-{
-    uint16_t otaPort = 3232;
-#if defined(ESP8266)
-    otaPort = this->config.get<int>(this->config.key_ota_port, 8266);
-#endif
-
-#if defined(ESP32)
-    otaPort = this->config.get<int>(this->config.key_ota_port, 3232);
-#endif
-
-    mdebugV("OTA is enabled. OTA port: %d", otaPort);
-    ArduinoOTA.setPort(otaPort);
-    ArduinoOTA.setHostname(this->hostNameC);
-
-    String hash = this->config.get<String>(this->config.key_ota_password);
-    if (hash != "")
-        ArduinoOTA.setPasswordHash(hash.c_str());
-
-    MokoshOTAHandlers moc = this->otaEvents;
-
-    ArduinoOTA
-        .onStart([&]()
-                 {
-            String type;
-            if (ArduinoOTA.getCommand() == U_FLASH) {
-                type = "sketch";
-            } else {
-                // U_SPIFFS
-                type = "filesystem";
-                LittleFS.end();
-            }
-
-            this->isOTAInProgress = true;
-
-            mdebugI("OTA started. Updating %s", type.c_str());
-            if (moc.onStart != nullptr)
-                moc.onStart(); });
-
-    ArduinoOTA.onEnd([&]()
-                     {
-        mdebugI("OTA finished.");
-        LittleFS.begin();
-        this->isOTAInProgress = false;
-
-        if (moc.onEnd != nullptr)
-            moc.onEnd(); });
-
-    ArduinoOTA.onProgress([moc](unsigned int progress, unsigned int total)
-                          {
-        mdebugV("OTA progress: %u%%\n", (progress / (total / 100)));
-        if (moc.onProgress != nullptr)
-            moc.onProgress(progress, total); });
-
-    ArduinoOTA.onError([moc](ota_error_t error)
-                       {
-        String err;
-        if (error == OTA_AUTH_ERROR)
-            err = "auth error";
-        else if (error == OTA_BEGIN_ERROR)
-            err = "begin failed";
-        else if (error == OTA_CONNECT_ERROR)
-            err = "connect failed";
-        else if (error == OTA_RECEIVE_ERROR)
-            err = "receive failed";
-        else if (error == OTA_END_ERROR)
-            err = "end failed";
-
-        mdebugE("OTA failed with error %u (%s)", error, err.c_str());
-
-        if (moc.onError != nullptr)
-            moc.onError(error); });
-
-    ArduinoOTA.begin();
-}
-
 std::vector<std::shared_ptr<TickTwo>> Mokosh::getTickers()
 {
     return tickers;
@@ -317,13 +241,6 @@ void Mokosh::begin(String prefix, bool autoconnect)
             this->setupWiFiClient();
             this->setupMqttClient();
 
-            this->setupWiFiDependentServices();
-
-            if (this->isOTAEnabled)
-            {
-                this->setupOta();
-            }
-
             this->hello();
             this->isWifiConfigured = true;
         }
@@ -335,7 +252,7 @@ void Mokosh::begin(String prefix, bool autoconnect)
             }
             else
             {
-                mdebugD("Wi-Fi connection error, ignored.");
+                mdebugI("Wi-Fi connection error but ignored.");
             }
         }
     }
@@ -345,6 +262,7 @@ void Mokosh::begin(String prefix, bool autoconnect)
     }
 
     initializeTickers();
+    this->setupServices();
 
     mdebugI("Starting operations...");
     isAfterBegin = true;
@@ -623,8 +541,12 @@ void Mokosh::loop()
     if (this->mqtt != nullptr)
         this->mqtt->loop();
 
+    for (auto &service : this->services)
+    {
+        service.second->loop();
+    }
+
     Debug.handle();
-    ArduinoOTA.handle();
 }
 
 void Mokosh::factoryReset()
@@ -998,31 +920,9 @@ Mokosh *Mokosh::setBuildMetadata(String version, String buildDate)
     return this;
 }
 
-Mokosh *Mokosh::setOta(bool value)
-{
-    if (this->isAfterBegin)
-    {
-        mdebugE("Must be called before begin()");
-        return this;
-    }
-
-    this->isOTAEnabled = value;
-
-    if (this->isOTAEnabled)
-        this->isMDNSEnabled = true;
-
-    return this;
-}
-
 Mokosh *Mokosh::setIgnoreConnectionErrors(bool value)
 {
     this->isIgnoringConnectionErrors = value;
-    return this;
-}
-
-Mokosh *Mokosh::setMDNS(bool value)
-{
-    this->isMDNSEnabled = value;
     return this;
 }
 
@@ -1047,30 +947,74 @@ Client *Mokosh::getClient()
     return this->client;
 }
 
-Mokosh *Mokosh::registerService(std::shared_ptr<MokoshService> service, bool isWiFiDependent)
+bool isDependentOn(std::shared_ptr<MokoshService> service, const char *key)
 {
-    if (isWiFiDependent)
-        this->wifiDependentServices.push_back(service);
-    else
-        this->services.push_back(service);
+    auto it = std::find(service->getDependencies().begin(), service->getDependencies().end(), "NETWORK");
+    return (it != service->getDependencies().end());
+}
+
+Mokosh *Mokosh::registerService(const char *key, std::shared_ptr<MokoshService> service)
+{
+    this->services[key] = service;
+
+    if (this->isAfterBegin)
+    {
+        mdebugI("Service registered after begin, setting up immediately");
+        setupService(key, service);
+    }
 
     return this;
 }
 
-void Mokosh::setupWiFiDependentServices()
+bool Mokosh::setupService(const char *key, std::shared_ptr<MokoshService> service)
 {
-    for (auto &service : this->wifiDependentServices)
+    if (isDependentOn(service, MokoshService::DEPENDENCY_NETWORK) && (!isWifiConfigured))
     {
-        if (!service->isSetup())
-            service->setup(std::make_shared<Mokosh>(*this));
+        mdebugE("Wi-Fi dependent service %s cannot be set up because Wi-Fi is not configured", key);
+        return this;
     }
+
+    if (isDependentOn(service, MokoshService::DEPENDENCY_MQTT) && (!isWifiConfigured || !isMqttConfigured))
+    {
+        mdebugE("MQTT dependent service %s cannot be set up because Wi-Fi or MQTT are not configured", key);
+        return this;
+    }
+
+    // here should be some kind of dependency graph resolution
+    bool depsReady = true;
+    for (auto &deps : service->getDependencies())
+    {
+        if (this->services.find(deps) == this->services.end())
+        {
+            mdebugE("Cannot setup service %s because the dependency %s is not set up yet.", key, deps);
+            return false;
+            break;
+        }
+    }
+
+    service->setup(std::make_shared<Mokosh>(*this));
+
+    return true;
 }
 
 void Mokosh::setupServices()
 {
     for (auto &service : this->services)
     {
-        if (!service->isSetup())
-            service->setup(std::make_shared<Mokosh>(*this));
+        auto key = service.first;
+        auto value = service.second;
+
+        if (!value->isSetup())
+            setupService(key, value);
     }
+}
+
+bool Mokosh::isServiceRegistered(const char *key)
+{
+    return this->services.find(key) != this->services.end();
+}
+
+std::shared_ptr<MokoshService> Mokosh::getRegisteredService(const char *key)
+{
+    return this->services[key];
 }
