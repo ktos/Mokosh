@@ -7,8 +7,8 @@
 typedef enum LogLevel
 {
     PROFILER = 0,
-    VERBOSE = 1,
-    DEBUG = 2,
+    DEBUG = 1,
+    VERBOSE = 2,
     INFO = 3,
     WARNING = 4,
     ERROR = 5,
