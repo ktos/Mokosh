@@ -23,18 +23,7 @@
 #include "MokoshConfig.hpp"
 #include "MokoshHandlers.hpp"
 #include "MokoshService.hpp"
-
-// Debug level - starts from 0 to 6, higher is more severe
-typedef enum LogLevel
-{
-    PROFILER = 0,
-    VERBOSE = 1,
-    DEBUG = 2,
-    INFO = 3,
-    WARNING = 4,
-    ERROR = 5,
-    ANY = 6
-} LogLevel;
+#include "DebugAdapter.hpp"
 
 #define EVENTS_COUNT 10
 #define HEARTBEAT 10000
@@ -71,7 +60,7 @@ class Mokosh
 public:
     // creates a new instance of a Mokosh framework object
     // optionally sets up config file - if not set, in RAM will be used
-    Mokosh(String prefix = "Mokosh", String version = "1.0.0", bool useFilesystem = true);
+    Mokosh(String prefix = "Mokosh", String version = "1.0.0", bool useFilesystem = true, bool useSerial = true);
 
     // sets debug level verbosity, must be called before begin()
     Mokosh *setLogLevel(LogLevel level);
@@ -88,6 +77,9 @@ public:
     // if called after begin(), the service will be set up immediately
     // and if not, in a setup phase of the services
     Mokosh *registerService(const char *key, std::shared_ptr<MokoshService> service);
+
+    // registers a debug adapter
+    Mokosh *registerDebugAdapter(const char *key, std::shared_ptr<DebugAdapter> service);
 
     // publishes a new message on a Prefix_ABCDE/subtopic topic with
     // a given payload
@@ -192,9 +184,6 @@ public:
     // e.g. on Scaleway retained flag forces disconnect of the client
     Mokosh *setIPRetained(bool value);
 
-    // returns if the RemoteDebug is ready
-    bool isDebugReady();
-
     // returns if Wi-Fi is connected at all
     bool isWifiConnected();
 
@@ -209,10 +198,6 @@ public:
     // sets up MQTT client
     // is being automatically run on begin() if autoconnect is true
     void setupMqttClient();
-
-    // sets up RemoteDebug
-    // is being automatically run on begin() if autoconnect is true
-    void setupRemoteDebug();
 
     // sets up communication using the custom Client instance (e.g. GSM)
     // remember to use at least setupMqttClient() and hello() after using
@@ -307,6 +292,8 @@ private:
 
     std::vector<std::shared_ptr<TickTwo>> tickers;
     std::map<const char *, std::shared_ptr<MokoshService>> services;
+
+    static std::vector<std::shared_ptr<DebugAdapter>> debugAdapters;
 };
 
 #include "MokoshResilience.hpp"

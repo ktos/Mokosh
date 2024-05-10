@@ -2,6 +2,8 @@
 
 static Mokosh *_instance;
 
+std::vector<std::shared_ptr<DebugAdapter>> Mokosh::debugAdapters;
+
 void _mqtt_callback(char *topic, uint8_t *message, unsigned int length)
 {
     _instance->_mqttCommandReceived(topic, message, length);
@@ -9,19 +11,24 @@ void _mqtt_callback(char *topic, uint8_t *message, unsigned int length)
 
 RemoteDebug Debug;
 
-Mokosh::Mokosh(String prefix, String version, bool useFilesystem)
+Mokosh::Mokosh(String prefix, String version, bool useFilesystem, bool useSerial)
 {
     _instance = this;
     Mokosh::debugReady = false;
 
     this->version = version;
 
-    Serial.begin(115200);
-    Serial.println();
-    Serial.println();
-    Serial.print("Hi, I'm ");
-    Serial.print(prefix);
-    Serial.println(".");
+    if (useSerial)
+    {
+        Serial.begin(115200);
+        Serial.println();
+        Serial.println();
+        Serial.print("Hi, I'm ");
+        Serial.print(prefix);
+        Serial.println(".");
+
+        this->registerDebugAdapter("SERIAL_DEBUG", std::make_shared<SerialDebugAdapter>());
+    }
 
     char hostString[16] = {0};
 #if defined(ESP8266)
@@ -74,42 +81,45 @@ void Mokosh::debug(LogLevel level, const char *func, const char *file, int line,
     vsprintf(dest, fmt, argptr);
     va_end(argptr);
 
-    if (!_instance->isDebugReady())
+    for (auto &adapter : Mokosh::debugAdapters)
     {
-        char lvl;
-        switch (level)
+        if (adapter->isActive(level))
         {
-        case LogLevel::DEBUG:
-            lvl = 'D';
-            break;
-        case LogLevel::ERROR:
-            lvl = 'E';
-            break;
-        case LogLevel::INFO:
-            lvl = 'I';
-            break;
-        case LogLevel::WARNING:
-            lvl = 'W';
-            break;
-        case LogLevel::VERBOSE:
-            lvl = 'V';
-            break;
-        default:
-            lvl = 'A';
+            adapter->debugf(level, func, file, line, millis(), dest);
         }
-
-        Serial.printf("L (%c t:%ldms) (%s %s:%d) %s\n", lvl, millis(), func, file, line, dest);
     }
 
-    if (Debug.isActive((uint8_t)level))
-    {
-        Debug.printf("(%s %s:%d) %s\n", func, file, line, dest);
-    }
-}
+    // if (!_instance->isDebugReady())
+    // {
+    //     char lvl;
+    //     switch (level)
+    //     {
+    //     case LogLevel::DEBUG:
+    //         lvl = 'D';
+    //         break;
+    //     case LogLevel::ERROR:
+    //         lvl = 'E';
+    //         break;
+    //     case LogLevel::INFO:
+    //         lvl = 'I';
+    //         break;
+    //     case LogLevel::WARNING:
+    //         lvl = 'W';
+    //         break;
+    //     case LogLevel::VERBOSE:
+    //         lvl = 'V';
+    //         break;
+    //     default:
+    //         lvl = 'A';
+    //     }
 
-bool Mokosh::isDebugReady()
-{
-    return this->debugReady;
+    //     Serial.printf("L (%c t:%ldms) (%s %s:%d) %s\n", lvl, millis(), func, file, line, dest);
+    // }
+
+    // if (Debug.isActive((uint8_t)level))
+    // {
+    //     Debug.printf("(%s %s:%d) %s\n", func, file, line, dest);
+    // }
 }
 
 bool Mokosh::configureMqttClient()
@@ -146,16 +156,16 @@ void handleRemoteDebugCommand()
     _instance->_processCommand(cmd);
 }
 
-void Mokosh::setupRemoteDebug()
-{
-    Debug.begin(this->hostName, (uint8_t)this->debugLevel);
-    Debug.setSerialEnabled(true);
-    Debug.setResetCmdEnabled(true);
-    Debug.showTime(true);
-    Debug.setCallBackProjectCmds(handleRemoteDebugCommand);
+// void Mokosh::setupRemoteDebug()
+// {
+//     Debug.begin(this->hostName, (uint8_t)this->debugLevel);
+//     Debug.setSerialEnabled(true);
+//     Debug.setResetCmdEnabled(true);
+//     Debug.showTime(true);
+//     Debug.setCallBackProjectCmds(handleRemoteDebugCommand);
 
-    this->debugReady = true;
-}
+//     this->debugReady = true;
+// }
 
 void Mokosh::setupWiFiClient()
 {
@@ -232,7 +242,7 @@ void Mokosh::begin(bool autoconnect)
         this->connectWifi();
         if (this->lastWifiStatus == WL_CONNECTED)
         {
-            this->setupRemoteDebug();
+            // this->setupRemoteDebug();
             this->setupWiFiClient();
             this->setupMqttClient();
 
@@ -858,9 +868,25 @@ Mokosh *Mokosh::registerService(const char *key, std::shared_ptr<MokoshService> 
 
     if (this->isAfterBegin)
     {
-        mdebugI("Service registered after begin, setting up immediately");
+        mdebugI("Service %s registered after begin, setting up immediately", key);
         setupService(key, service);
     }
+
+    return this;
+}
+
+Mokosh *Mokosh::registerDebugAdapter(const char *key, std::shared_ptr<DebugAdapter> service)
+{
+    // adding both to the services list as well as special list of only debug adapters
+    this->services[key] = service;
+
+    if (this->isAfterBegin)
+    {
+        mdebugI("Debug Adapter %s registered after begin, setting up immediately", key);
+        setupService(key, service);
+    }
+
+    Mokosh::debugAdapters.push_back(service);
 
     return this;
 }
