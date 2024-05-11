@@ -1,6 +1,8 @@
 #ifndef OTASERVICE_H
 #define OTASERVICE_H
 
+#if defined(ESP32) || defined(ESP8266)
+
 #include "MokoshService.hpp"
 #include <ArduinoOTA.h>
 #include <Arduino.h>
@@ -132,5 +134,7 @@ namespace MokoshServices
         bool isOTAInProgress = false;
     };
 }
+
+#endif
 
 #endif

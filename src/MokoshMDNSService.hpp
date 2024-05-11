@@ -1,6 +1,8 @@
 #ifndef MDNSSERVICE_H
 #define MDNSSERVICE_H
 
+#if defined(ESP32) || defined(ESP8266)
+
 #include "MokoshService.hpp"
 #include <Arduino.h>
 #include <memory>
@@ -33,5 +35,7 @@ namespace MokoshServices
         static const char *KEY;
     };
 }
+
+#endif
 
 #endif

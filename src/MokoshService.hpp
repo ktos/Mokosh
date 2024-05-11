@@ -9,10 +9,18 @@
 #include <Client.h>
 #endif
 
+#if defined(NRF52)
+#include <Client.h>
+#endif
+
 class Mokosh;
 class MokoshConfig;
 
+#if defined(ESP8266) || defined(ESP32)
 typedef std::function<void(String, uint8_t *msg, unsigned int length)> THandlerFunction_Message;
+#elif defined(NRF52)
+typedef void (*THandlerFunction_Message)(String, uint8_t *, unsigned int);
+#endif
 
 // a class representing a Mokosh Service, a class which is started
 // with dependency on another classes and is being looped along with others

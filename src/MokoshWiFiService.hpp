@@ -15,6 +15,8 @@
 
 #include <Mokosh.hpp>
 
+#if defined(ESP32) || defined(ESP8266)
+
 class MokoshWiFiService : public MokoshNetworkService
 {
 public:
@@ -184,5 +186,9 @@ private:
     wl_status_t lastWifiStatus;
     std::shared_ptr<WiFiClient> client = nullptr;
 };
+
+#else
+
+#endif
 
 #endif

@@ -9,6 +9,8 @@
 #include <ESPmDNS.h>
 #endif
 
+#if defined(ESP32) || defined(ESP8266)
+
 namespace MokoshServices
 {
     const char *MDNSService::KEY = "MDNS";
@@ -49,3 +51,5 @@ namespace MokoshServices
     {
     }
 }
+
+#endif

@@ -1,5 +1,4 @@
 #include "Arduino.h"
-#include <ArduinoOTA.h>
 
 typedef std::function<void(void)> THandlerFunction;
 typedef std::function<void(String, String)> THandlerFunction_Command;

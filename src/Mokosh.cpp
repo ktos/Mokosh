@@ -36,7 +36,9 @@ Mokosh::Mokosh(String prefix, String version, bool useFilesystem, bool useSerial
 
     sprintf(hostString, "%06X", chipId);
 #else
+#if !defined(OVERRIDE_HOSTNAME)
 #error Use OVERRIDE_HOSTNAME or implement ChipID for this platform
+#endif
 #endif
 
     this->prefix = prefix;
@@ -134,6 +136,7 @@ String Mokosh::getVersion()
 
 void Mokosh::begin(bool autoconnect)
 {
+#if defined(ESP32) || defined(ESP8266)
     // if there is no "NETWORK" providing service registered previously (before begin()),
     // register a Wi-Fi network providing service, if autoconnect is true,
     // as well as MQTT provider
@@ -170,6 +173,10 @@ void Mokosh::begin(bool autoconnect)
 
         this->hello();
     }
+#else
+#warning Not ESP8266 or ESP32, autoconnect is set to false, network is not configured
+    autoconnect = false;
+#endif
 
     // set up tickers and all services
     initializeTickers();
@@ -197,7 +204,7 @@ void Mokosh::publishIP()
 
     if (this->getNetworkService() && this->getNetworkService()->isConnected())
     {
-        WiFi.localIP().toString().toCharArray(ipbuf, 15);
+        this->getNetworkService()->getIP().toCharArray(ipbuf, 15);
         snprintf(msg, sizeof(msg) - 1, "{\"ipaddress\": \"%s\"}", ipbuf);
 
         mlogV("Sending IP: %s", ipbuf);
@@ -207,6 +214,7 @@ void Mokosh::publishIP()
 
 bool Mokosh::reconnect()
 {
+#if defined(ESP32) || defined(ESP8266)
     auto network = this->getRegisteredService<MokoshWiFiService>(MokoshService::DEPENDENCY_NETWORK);
 
     if (network == nullptr)
@@ -275,6 +283,9 @@ bool Mokosh::reconnect()
     }
 
     return network->isConnected() && mqtt->isConnected();
+#else
+    return true;
+#endif
 }
 
 Mokosh *Mokosh::setForceWiFiReconnect(bool value)
@@ -327,8 +338,13 @@ void Mokosh::loop()
 void Mokosh::factoryReset()
 {
     mlogI("Factory reset initialized");
+
+#if defined(ESP32) || defined(ESP8266)
     LittleFS.format();
     ESP.restart();
+#else
+#warning Implement factory reset for this platform
+#endif
 }
 
 void Mokosh::publishShortVersion()
@@ -390,6 +406,7 @@ void Mokosh::_processCommand(String command)
         return;
     }
 
+#if defined(ESP32) || defined(ESP8266)
     if (command == "gmd5")
     {
         char md5[128];
@@ -399,10 +416,15 @@ void Mokosh::_processCommand(String command)
 
         return;
     }
+#endif
 
     if (command == "reboot")
     {
+#if defined(ESP32) || defined(ESP8266)
         ESP.restart();
+#else
+#warning Implement restart for this platform
+#endif
 
         return;
     }
@@ -491,7 +513,11 @@ void Mokosh::error(int code)
         {
             mlogE("Unhandled error, code: %d, reboot imminent.", code);
             delay(10000);
+#if defined(ESP32) || defined(ESP8266)
             ESP.restart();
+#else
+#warning Implement restart for this platform
+#endif
         }
         else
         {
@@ -610,7 +636,7 @@ Mokosh *Mokosh::registerLogger(const char *key, std::shared_ptr<MokoshLogger> se
 bool Mokosh::setupService(const char *key, std::shared_ptr<MokoshService> service)
 {
     auto network = this->getNetworkService();
-    auto mqtt = this->getRegisteredService<MokoshWiFiService>(MokoshService::DEPENDENCY_MQTT);
+    auto mqtt = this->getRegisteredService<MokoshMqttService>(MokoshService::DEPENDENCY_MQTT);
 
     if (isDependentOn(service, MokoshService::DEPENDENCY_NETWORK) && (network == nullptr))
     {

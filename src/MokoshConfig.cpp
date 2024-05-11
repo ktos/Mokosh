@@ -1,6 +1,13 @@
 #include "MokoshConfig.hpp"
 #include "Mokosh.hpp"
 
+#if defined(NRF52)
+#include <Adafruit_LittleFS.h>
+Adafruit_LittleFS LittleFS;
+
+using namespace Adafruit_LittleFS_Namespace;
+#endif
+
 const char *MokoshConfig::KEY = "CONFIG";
 
 MokoshConfig::MokoshConfig(bool useFileSystem)
@@ -15,7 +22,12 @@ bool MokoshConfig::isConfigurationSet()
 
 bool MokoshConfig::configFileExists()
 {
+#if defined(NRF52)
+    File configFile = LittleFS.open("/config.json", Adafruit_LittleFS_Namespace::FILE_O_READ);
+#elif defined(ESP8266) || defined(ESP32)
     File configFile = LittleFS.open("/config.json", "r");
+#elif
+#endif
 
     if (!configFile)
     {
@@ -53,7 +65,13 @@ void MokoshConfig::saveConfig()
         return;
 
     mlogV("Saving config.json");
+#if defined(NRF52)
+    File configFile = LittleFS.open("/config.json", Adafruit_LittleFS_Namespace::FILE_O_WRITE);
+#elif defined(ESP8266) || defined(ESP32)
     File configFile = LittleFS.open("/config.json", "w");
+#elif
+#endif
+
     serializeJson(this->config, configFile);
 }
 
@@ -63,7 +81,12 @@ bool MokoshConfig::reloadFromFile()
         return true;
 
     mlogV("Reloading config.json");
+#if defined(NRF52)
+    File configFile = LittleFS.open("/config.json", Adafruit_LittleFS_Namespace::FILE_O_READ);
+#elif defined(ESP8266) || defined(ESP32)
     File configFile = LittleFS.open("/config.json", "r");
+#elif
+#endif
 
     if (!configFile)
     {

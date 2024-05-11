@@ -1,6 +1,8 @@
 #ifndef PUBSUBCLIENTSERVICE_H
 #define PUBSUBCLIENTSERVICE_H
 
+#if defined(ESP32) || defined(ESP8266)
+
 #include "MokoshService.hpp"
 #include <PubSubClient.h>
 #include <Mokosh.hpp>
@@ -230,5 +232,7 @@ private:
 
     String cmd_topic;
 };
+
+#endif
 
 #endif
