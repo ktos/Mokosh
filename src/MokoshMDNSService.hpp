@@ -15,7 +15,7 @@ namespace MokoshServices
         {
         }
 
-        virtual bool setup(std::shared_ptr<Mokosh> mokosh) override;
+        virtual bool setup() override;
 
         // adds broadcasted MDNS service
         void addMDNSService(const char *service, const char *proto, uint16_t port);

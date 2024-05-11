@@ -22,8 +22,10 @@ public:
     {
     }
 
-    virtual bool setup(std::shared_ptr<Mokosh> mokosh) override
+    virtual bool setup() override
     {
+        auto mokosh = Mokosh::getInstance();
+
         WiFi.enableAP(0);
         char fullHostName[32] = {0};
         sprintf(fullHostName, "%s_%s", mokosh->getPrefix().c_str(), mokosh->getHostName().c_str());

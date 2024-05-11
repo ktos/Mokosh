@@ -98,7 +98,7 @@ void MokoshConfig::removeConfigFile()
 }
 
 // sets up the configuration system
-bool MokoshConfig::setup(std::shared_ptr<Mokosh> mokosh)
+bool MokoshConfig::setup()
 {
     if (!this->useFileSystem)
         return true;

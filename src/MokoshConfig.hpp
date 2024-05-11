@@ -65,7 +65,7 @@ public:
     bool configFileExists();
 
     // sets up the configuration system
-    virtual bool setup(std::shared_ptr<Mokosh> mokosh) override;
+    virtual bool setup() override;
 
     // unused, but required by services
     virtual void loop() override;

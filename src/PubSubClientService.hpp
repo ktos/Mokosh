@@ -12,8 +12,9 @@ public:
     {
     }
 
-    virtual bool setup(std::shared_ptr<Mokosh> mokosh) override
+    virtual bool setup() override
     {
+        auto mokosh = Mokosh::getInstance();
         this->network = mokosh->getNetworkService();
         this->mqtt = std::make_shared<PubSubClient>(*mokosh->getNetworkService()->getClient());
 
@@ -46,7 +47,6 @@ public:
         if (mokosh->config->hasKey(mokosh->config->key_client_id))
             this->clientId = mokosh->config->get<String>(mokosh->config->key_client_id, mokosh->getHostNameWithPrefix());
 
-        this->mokosh = mokosh;
         this->setupReady = true;
         this->cmd_topic = mokosh->getMqttPrefix() + String(cmd);
 
@@ -78,7 +78,6 @@ public:
 
     virtual bool reconnect()
     {
-
         if (this->mqtt->connect(clientId.c_str()))
         {
             mdebugI("MQTT reconnected");
@@ -86,7 +85,13 @@ public:
             this->mqtt->setCallback([&](char *topic, uint8_t *message, unsigned int length)
                                     { this->_mqttCommandReceived(topic, message, length); });
 
+            // resubscribing to all subscribed topics (and cmd_topic)
             this->mqtt->subscribe(cmd_topic.c_str());
+
+            for (auto &topic : subscriptions)
+            {
+                this->mqtt->subscribe(topic);
+            }
 
             return true;
         }
@@ -159,10 +164,30 @@ public:
         return this->mqtt;
     }
 
+    // subscribes to a given topic
+    virtual void subscribe(const char *topic) override
+    {
+        subscriptions.push_back(topic);
+        this->mqtt->subscribe(topic);
+    }
+
+    // unsubscribes from a given topic
+    virtual void unsubscribe(const char *topic) override
+    {
+        auto it = std::find(subscriptions.begin(), subscriptions.end(), topic);
+        if (it != subscriptions.end())
+        {
+            subscriptions.erase(it);
+            this->mqtt->unsubscribe(topic);
+        }
+    }
+
     // internal function run when a new message is received
     // exposed only as a workaround
     void _mqttCommandReceived(char *topic, uint8_t *message, unsigned int length)
     {
+        auto mokosh = Mokosh::getInstance();
+
         if (length > 64)
         {
             mdebugE("MQTT message too long, ignoring.");
@@ -198,14 +223,13 @@ public:
 private:
     std::shared_ptr<PubSubClient> mqtt;
     std::shared_ptr<MokoshNetworkService> network;
-    std::shared_ptr<Mokosh> mokosh;
 
     bool isMqttConfigured = false;
     String mqttPrefix;
     String clientId;
 
     const char *cmd = "cmd";
-    // std::vector<const char*> subscriptions;
+    std::vector<const char *> subscriptions;
 
     String cmd_topic;
 };

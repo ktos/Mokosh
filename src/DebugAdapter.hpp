@@ -28,7 +28,7 @@ public:
 class SerialDebugAdapter : public DebugAdapter
 {
 public:
-    virtual bool setup(std::shared_ptr<Mokosh> mokosh)
+    virtual bool setup()
     {
         return true;
     }

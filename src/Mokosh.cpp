@@ -55,7 +55,7 @@ Mokosh::Mokosh(String prefix, String version, bool useFilesystem, bool useSerial
     // config service is set up in the beginning, and immediately
     this->registerService(MokoshConfig::KEY, std::make_shared<MokoshConfig>(useFilesystem));
     this->config = this->getRegisteredService<MokoshConfig>(MokoshConfig::KEY);
-    if (!this->config->setup(std::make_shared<Mokosh>(*this)))
+    if (!this->config->setup())
     {
         mdebugE("Configuration Service failed!");
     }
@@ -137,36 +137,9 @@ String Mokosh::getVersion()
 
 void Mokosh::begin(bool autoconnect)
 {
-    // if (autoconnect)
-    // {
-    //     this->connectWifi();
-    //     if (this->lastWifiStatus == WL_CONNECTED)
-    //     {
-    //         this->setupWiFiClient();
-    //         this->setupMqttClient();
-
-    //         this->hello();
-    //         this->isWifiConfigured = true;
-    //     }
-    //     else
-    //     {
-    //         if (!this->isIgnoringConnectionErrors)
-    //         {
-    //             this->error(MokoshErrors::CannotConnectToWifi);
-    //         }
-    //         else
-    //         {
-    //             mdebugI("Wi-Fi connection error but ignored.");
-    //         }
-    //     }
-    // }
-    // else
-    // {
-    //     mdebugI("Auto network connection was disabled!");
-    // }
-
-    // if there is no "NETWORK" providing service registered previously, register a Wi-Fi
-    // network providing service, if autoconnect is true, as well as MQTT provider
+    // if there is no "NETWORK" providing service registered previously (before begin()),
+    // register a Wi-Fi network providing service, if autoconnect is true,
+    // as well as MQTT provider
     if (autoconnect && !this->isServiceRegistered(MokoshService::DEPENDENCY_NETWORK))
     {
         mdebugD("autoconnect, registering Wi-Fi as a network provider");
@@ -175,7 +148,7 @@ void Mokosh::begin(bool autoconnect)
 
         // run immediately, before all other services
         // TODO: handle fail
-        network->setup(std::make_shared<Mokosh>(*this));
+        network->setup();
         // MokoshResilience::Retry::retry([&network]()
         //                                { return network->reconnect(); });
 
@@ -187,7 +160,7 @@ void Mokosh::begin(bool autoconnect)
 
             // run immediately, before all other services
             // TODO: handle fail
-            mqtt->setup(std::make_shared<Mokosh>(*this));
+            mqtt->setup();
         }
 
         this->hello();
@@ -665,7 +638,7 @@ bool Mokosh::setupService(const char *key, std::shared_ptr<MokoshService> servic
 
     // services are not being setup more than once
     if (!service->isSetup())
-        service->setup(std::make_shared<Mokosh>(*this));
+        service->setup();
 
     return true;
 }

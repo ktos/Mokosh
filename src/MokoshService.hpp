@@ -23,7 +23,7 @@ public:
 
     // sets up a new instance of a service, an instance to the main class
     // is passed to check some data or read configuration
-    virtual bool setup(std::shared_ptr<Mokosh> mokosh) = 0;
+    virtual bool setup() = 0;
 
     // returns if the class has been set up properly
     virtual bool isSetup()
@@ -111,6 +111,12 @@ public:
     {
         this->publish(subtopic, String(payload));
     }
+
+    // subscribes to a given topic
+    virtual void subscribe(const char *topic) = 0;
+
+    // unsubscribes from a given topic
+    virtual void unsubscribe(const char *topic) = 0;
 };
 
 #endif

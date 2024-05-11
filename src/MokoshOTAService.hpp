@@ -28,8 +28,10 @@ namespace MokoshServices
         {
         }
 
-        virtual bool setup(std::shared_ptr<Mokosh> mokosh) override
+        virtual bool setup() override
         {
+            auto mokosh = Mokosh::getInstance();
+
             uint16_t otaPort = 3232;
 #if defined(ESP8266)
             otaPort = mokosh->config->get<int>(mokosh->config->key_ota_port, 8266);
