@@ -65,8 +65,10 @@ public:
     Mokosh *registerService(const char *key, std::shared_ptr<MokoshService> service);
     Mokosh *registerService(std::shared_ptr<MokoshService> service);
 
-    // registers a debug adapter
+    // registers a logger
     Mokosh *registerLogger(const char *key, std::shared_ptr<MokoshLogger> service);
+
+    // registers a logger
     Mokosh *registerLogger(std::shared_ptr<MokoshLogger> service);
 
     // prints message of a desired debug level to all debug adapters
@@ -75,7 +77,7 @@ public:
     // use rather mlog() macros instead of direct usage of this function
     static void log(LogLevel level, const char *func, const char *file, int line, const char *fmt, ...);
 
-    // prints to the debug adapters the "busy" indicator
+    // prints to the loggers the "busy" indicator
     static void debug_ticker_step();
     static void debug_ticker_finish(bool success);
 

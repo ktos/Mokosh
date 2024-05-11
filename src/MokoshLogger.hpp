@@ -43,24 +43,9 @@ public:
 
 protected:
     LogLevel currentLevel;
-};
 
-class SerialLogger : public MokoshLogger
-{
-public:
-    virtual bool setup() override
+    virtual char levelToChar(LogLevel level)
     {
-        this->setupFinished = true;
-        return true;
-    }
-
-    virtual void loop() override {}
-
-    virtual void log(LogLevel level, const char *func, const char *file, int line, long time, const char *msg) override
-    {
-        if (level < this->currentLevel)
-            return;
-
         char lvl;
         switch (level)
         {
@@ -83,6 +68,27 @@ public:
             lvl = 'A';
         }
 
+        return lvl;
+    }
+};
+
+class SerialLogger : public MokoshLogger
+{
+public:
+    virtual bool setup() override
+    {
+        this->setupFinished = true;
+        return true;
+    }
+
+    virtual void loop() override {}
+
+    virtual void log(LogLevel level, const char *func, const char *file, int line, long time, const char *msg) override
+    {
+        if (level < this->currentLevel)
+            return;
+
+        char lvl = this->levelToChar(level);
         Serial.printf("(%c t:%ldms) (%s %s:%d) %s\n", lvl, time, func, file, line, msg);
     }
 
