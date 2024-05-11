@@ -12,6 +12,8 @@
 class Mokosh;
 class MokoshConfig;
 
+typedef std::function<void(String, uint8_t *msg, unsigned int length)> THandlerFunction_Message;
+
 // a class representing a Mokosh Service, a class which is started
 // with dependency on another classes and is being looped along with others
 class MokoshService
@@ -117,6 +119,10 @@ public:
 
     // unsubscribes from a given topic
     virtual void unsubscribe(const char *topic) = 0;
+
+    // defines callback to be run when message is received
+    // (e.g. in MQTT to a subscribed topic)
+    THandlerFunction_Message onMessage;
 };
 
 #endif

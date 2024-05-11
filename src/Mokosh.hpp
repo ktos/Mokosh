@@ -90,10 +90,6 @@ public:
     // must be set before begin()
     THandlerFunction_Command onCommand;
 
-    // defines callback to be run when message is received to a subscribed
-    // topic
-    THandlerFunction_Message onMessage;
-
     // defines callback to be run when error is thrown
     // must be set before begin()
     THandlerFunction_MokoshError onError;

@@ -48,7 +48,7 @@ public:
             this->clientId = mokosh->config->get<String>(mokosh->config->key_client_id, mokosh->getHostNameWithPrefix());
 
         this->setupReady = true;
-        this->cmd_topic = mokosh->getMqttPrefix() + String(cmd);
+        this->cmd_topic = mokosh->getMqttPrefix() + String(mokosh->cmd_topic);
 
         return reconnect();
     }
@@ -209,9 +209,9 @@ public:
         }
         else
         {
-            if (mokosh->onMessage != nullptr)
+            if (this->onMessage != nullptr)
             {
-                mokosh->onMessage(String(topic), message, length);
+                this->onMessage(String(topic), message, length);
             }
             else
             {
@@ -228,7 +228,6 @@ private:
     String mqttPrefix;
     String clientId;
 
-    const char *cmd = "cmd";
     std::vector<const char *> subscriptions;
 
     String cmd_topic;
