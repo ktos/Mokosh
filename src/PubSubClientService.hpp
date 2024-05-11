@@ -31,13 +31,13 @@ public:
         if (broker.fromString(brokerAddress))
         {
             this->mqtt->setServer(broker, brokerPort);
-            mdebugV("MQTT broker set to %s port %d", broker.toString().c_str(), brokerPort);
+            mdebugI("MQTT broker set to %s port %d", broker.toString().c_str(), brokerPort);
         }
         else
         {
             // so it must be a domain name
             this->mqtt->setServer(brokerAddress.c_str(), brokerPort);
-            mdebugV("MQTT broker set to %s port %d", brokerAddress.c_str(), brokerPort);
+            mdebugI("MQTT broker set to %s port %d", brokerAddress.c_str(), brokerPort);
         }
 
         this->isMqttConfigured = true;
@@ -49,8 +49,14 @@ public:
 
         this->setupReady = true;
         this->cmd_topic = mokosh->getMqttPrefix() + String(mokosh->cmd_topic);
+        this->reconnectCount = 0;
 
         return reconnect();
+    }
+
+    virtual bool isFirstConnection()
+    {
+        return this->reconnectCount = 0;
     }
 
     virtual void loop() override
@@ -78,6 +84,10 @@ public:
 
     virtual bool reconnect()
     {
+        // a bit different behaviour depending is this the first or
+        // later reconnect - if the first one is failing, we are throwing
+        // error, if not - we are trying to go into a reconnect state
+
         if (this->mqtt->connect(clientId.c_str()))
         {
             mdebugI("MQTT reconnected");
@@ -93,26 +103,14 @@ public:
                 this->mqtt->subscribe(topic);
             }
 
+            this->reconnectCount++;
+
             return true;
         }
         else
         {
-            // TODO: use resiliency
-
-            // if (this->isIgnoringConnectionErrors)
-            // {
-            //     mdebugD("Client not connected, but ignoring.");
-            //     return false;
-            // }
-
             mdebugE("MQTT failed: %d", mqtt->state());
-
-            // if not connected in the third trial, give up
-            // if (trials > 3)
-            //     return false;
-
-            // wait 5 seconds before retrying
-            delay(5000);
+            return false;
         }
 
         return true;
@@ -225,6 +223,7 @@ private:
     std::shared_ptr<MokoshNetworkService> network;
 
     bool isMqttConfigured = false;
+    int reconnectCount = 0;
     String mqttPrefix;
     String clientId;
 

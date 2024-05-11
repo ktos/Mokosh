@@ -44,7 +44,7 @@ public:
 
         this->setupReady = true;
 
-        return reconnect(mokosh->config);
+        return reconnect();
     }
 
     virtual void loop() override
@@ -87,14 +87,12 @@ public:
         return WiFi.localIP().toString();
     }
 
-    // TODO: trzeba jakoś wypieprzyć configa stąd
-    bool reconnect(std::shared_ptr<MokoshConfig> config)
+    bool reconnect()
     {
-#if defined(ESP32)
+        auto config = Mokosh::getInstance()->config;
+
         bool multi = config->hasKey(config->key_multi_ssid);
-#else
-        bool multi = false;
-#endif
+
         if (multi)
         {
 #if defined(ESP32)
@@ -110,7 +108,7 @@ public:
             if (error)
             {
                 mdebugE("Configured multiple ssid is wrong, deserialization error %s", error.c_str());
-                return wl_status_t::WL_NO_SSID_AVAIL;
+                return false;
             }
 
             for (JsonObject item : doc.as<JsonArray>())
@@ -125,6 +123,9 @@ public:
             {
                 mdebugI("Connected to %s", WiFi.SSID().c_str());
             }
+#else
+            mdebugE("Multiple SSIDs are not supported on ESP8266");
+            return false;
 #endif
         }
         else
@@ -135,7 +136,7 @@ public:
             if (ssid == "")
             {
                 mdebugE("Configured ssid is empty, cannot connect to Wi-Fi");
-                return wl_status_t::WL_NO_SSID_AVAIL;
+                return false;
             }
 
             WiFi.begin(ssid.c_str(), password.c_str());
@@ -169,6 +170,7 @@ public:
         else
         {
             Mokosh::debug_ticker_finish(false);
+            return false;
         }
 
         mdebugI("IP: %s", WiFi.localIP().toString().c_str());

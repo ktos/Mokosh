@@ -147,10 +147,13 @@ void Mokosh::begin(bool autoconnect)
         this->registerService(MokoshService::DEPENDENCY_NETWORK, network);
 
         // run immediately, before all other services
-        // TODO: handle fail
-        network->setup();
-        // MokoshResilience::Retry::retry([&network]()
-        //                                { return network->reconnect(); });
+        bool isConnected = MokoshResilience::Retry::retry([&network]()
+                                                          { return network->setup(); }, 3, 5000, 1);
+
+        if (!isConnected)
+        {
+            this->error(MokoshErrors::NetworkConnectionFailed);
+        }
 
         if (!this->isServiceRegistered(MokoshService::DEPENDENCY_MQTT))
         {
@@ -159,8 +162,13 @@ void Mokosh::begin(bool autoconnect)
             this->registerService(MokoshService::DEPENDENCY_MQTT, mqtt);
 
             // run immediately, before all other services
-            // TODO: handle fail
-            mqtt->setup();
+            bool isConnected = MokoshResilience::Retry::retry([&mqtt]()
+                                                              { return mqtt->setup(); }, 3, 5000, 1);
+
+            if (!isConnected)
+            {
+                this->error(MokoshErrors::MqttConnectionFailed);
+            }
         }
 
         this->hello();
@@ -218,7 +226,7 @@ bool Mokosh::reconnect()
     if (!network->isConnected() && this->isForceWifiReconnect)
     {
         mdebugV("Wi-Fi is not connected at all, forcing reconnect.");
-        network->reconnect(this->config);
+        network->reconnect();
     }
 
     // if (this->mqtt->connected())
@@ -238,7 +246,7 @@ bool Mokosh::reconnect()
     //             }
     //             else
     //             {
-    //                 this->error(MokoshErrors::CannotConnectToWifi);
+    //                 this->error(MokoshErrors::NetworkConnectionFailed);
     //             }
     //         }
     //     }

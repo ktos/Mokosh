@@ -77,14 +77,20 @@ public:
 
     virtual String getIP() = 0;
 
-    virtual bool reconnect(std::shared_ptr<MokoshConfig> config) = 0;
+    virtual bool reconnect() = 0;
 };
 
 class MokoshMqttService : public MokoshService
 {
 public:
+    // returns if the Mqtt Service is connected to the network
     virtual bool isConnected() = 0;
+
+    // reconnects the MQTT service with the network
     virtual bool reconnect() = 0;
+
+    // returns if this is a first connection attempt or subsequent
+    virtual bool isFirstConnection() = 0;
 
     // publishes a new message on a given topic with a given payload
     virtual void publishRaw(const char *topic, const char *payload, bool retained) = 0;

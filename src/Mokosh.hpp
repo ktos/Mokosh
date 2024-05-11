@@ -36,7 +36,7 @@ enum MokoshErrors
     FileSystemNotAvailable = 2,
 
     // error code thrown when couldn't connect to Wi-Fi
-    CannotConnectToWifi = 3,
+    NetworkConnectionFailed = 3,
 
     // error code thrown when MQTT broker connection fails
     MqttConnectionFailed = 5

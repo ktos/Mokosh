@@ -51,9 +51,12 @@ namespace MokoshResilience
                     return true;
 
                 long time = delayTime * power(delayFactor, i + 1);
+                i++;
+                if (i >= trials)
+                    break;
+
                 mdebugV("Resilience operation failed, retrying in %d", time);
                 delay(time);
-                i++;
             }
 
             mdebugV("Resilience operation failed after %d trials, giving up!", trials);
