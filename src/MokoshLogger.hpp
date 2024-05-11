@@ -15,35 +15,52 @@ typedef enum LogLevel
     ANY = 6
 } LogLevel;
 
-class DebugAdapter : public MokoshService
+class MokoshLogger : public MokoshService
 {
 public:
-    virtual bool isActive(LogLevel level) = 0;
-    virtual void setActive(LogLevel level) = 0;
-    virtual void debugf(LogLevel level, const char *func, const char *file, int line, long time, const char *msg) = 0;
+    // logs the message to the logger
+    // the message consists of the level, function it was called in, filename with line number, time
+    // and the actual message
+    virtual void log(LogLevel level, const char *func, const char *file, int line, long time, const char *msg) = 0;
+
+    // logs that the long operation is in progress
     virtual void ticker_step() = 0;
+
+    // logs that the long operation has finished
     virtual void ticker_finish(bool success) = 0;
+
+    // sets the log level beneath which logs are ignored
+    virtual void setLevel(LogLevel level)
+    {
+        this->currentLevel = level;
+    }
+
+    // gets the current log level
+    virtual LogLevel getLevel()
+    {
+        return this->currentLevel;
+    }
+
+protected:
+    LogLevel currentLevel;
 };
 
-class SerialDebugAdapter : public DebugAdapter
+class SerialLogger : public MokoshLogger
 {
 public:
-    virtual bool setup()
+    virtual bool setup() override
     {
+        this->setupFinished = true;
         return true;
     }
 
-    virtual void loop() {}
+    virtual void loop() override {}
 
-    virtual bool isActive(LogLevel level)
+    virtual void log(LogLevel level, const char *func, const char *file, int line, long time, const char *msg) override
     {
-        return true;
-    }
+        if (level < this->currentLevel)
+            return;
 
-    virtual void setActive(LogLevel level) {}
-
-    virtual void debugf(LogLevel level, const char *func, const char *file, int line, long time, const char *msg)
-    {
         char lvl;
         switch (level)
         {

@@ -22,7 +22,7 @@ public:
         String brokerAddress = mokosh->config->get<String>(mokosh->config->key_broker);
         if (brokerAddress == "")
         {
-            mdebugE("MQTT configuration is not provided!");
+            mlogE("MQTT configuration is not provided!");
             return false;
         }
         uint16_t brokerPort = mokosh->config->get<int>(mokosh->config->key_broker_port, 1883);
@@ -31,13 +31,13 @@ public:
         if (broker.fromString(brokerAddress))
         {
             this->mqtt->setServer(broker, brokerPort);
-            mdebugI("MQTT broker set to %s port %d", broker.toString().c_str(), brokerPort);
+            mlogI("MQTT broker set to %s port %d", broker.toString().c_str(), brokerPort);
         }
         else
         {
             // so it must be a domain name
             this->mqtt->setServer(brokerAddress.c_str(), brokerPort);
-            mdebugI("MQTT broker set to %s port %d", brokerAddress.c_str(), brokerPort);
+            mlogI("MQTT broker set to %s port %d", brokerAddress.c_str(), brokerPort);
         }
 
         this->isMqttConfigured = true;
@@ -47,7 +47,7 @@ public:
         if (mokosh->config->hasKey(mokosh->config->key_client_id))
             this->clientId = mokosh->config->get<String>(mokosh->config->key_client_id, mokosh->getHostNameWithPrefix());
 
-        this->setupReady = true;
+        this->setupFinished = true;
         this->cmd_topic = mokosh->getMqttPrefix() + String(mokosh->cmd_topic);
         this->reconnectCount = 0;
 
@@ -88,7 +88,7 @@ public:
 
         if (this->mqtt->connect(clientId.c_str()))
         {
-            mdebugI("MQTT reconnected");
+            mlogI("MQTT reconnected");
 
             this->mqtt->setCallback([&](char *topic, uint8_t *message, unsigned int length)
                                     { this->_mqttCommandReceived(topic, message, length); });
@@ -107,7 +107,7 @@ public:
         }
         else
         {
-            mdebugE("MQTT failed: %d", mqtt->state());
+            mlogE("MQTT failed: %d", mqtt->state());
             return false;
         }
 
@@ -119,29 +119,29 @@ public:
     {
         if (this->network->getClient() == nullptr)
         {
-            mdebugE("Cannot publish, Client was not constructed!");
+            mlogE("Cannot publish, Client was not constructed!");
             return;
         }
 
         if (this->mqtt == nullptr)
         {
-            mdebugE("Cannot publish, MQTT Client was not constructed!");
+            mlogE("Cannot publish, MQTT Client was not constructed!");
             return;
         }
 
         if (!this->isMqttConfigured)
         {
-            mdebugE("Cannot publish, broker address is not configured");
+            mlogE("Cannot publish, broker address is not configured");
             return;
         }
 
         if (!this->network->getClient()->connected())
         {
-            mdebugE("Cannot publish, not connected!");
+            mlogE("Cannot publish, not connected!");
             return;
         }
 
-        mdebugD("Publishing message on topic %s: %s", topic, payload);
+        mlogD("Publishing message on topic %s: %s", topic, payload);
         this->mqtt->publish(topic, payload, retained);
     }
 
@@ -187,7 +187,7 @@ public:
 
         if (length > 64)
         {
-            mdebugE("MQTT message too long, ignoring.");
+            mlogE("MQTT message too long, ignoring.");
             return;
         }
 
@@ -200,7 +200,7 @@ public:
 
         if (String(topic) == cmd_topic)
         {
-            mdebugD("MQTT command: %s", msg);
+            mlogD("MQTT command: %s", msg);
             String command = String(msg);
             mokosh->_processCommand(command);
         }
@@ -212,7 +212,7 @@ public:
             }
             else
             {
-                mdebugW("MQTT message received, but no handler, ignoring.");
+                mlogW("MQTT message received, but no handler, ignoring.");
             }
         }
     }

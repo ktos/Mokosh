@@ -19,7 +19,7 @@ void setup()
         String mess(ch);
 #endif
 
-        mdebugI("Received message on topic %s: %s", topic.c_str(), mess.c_str());
+        mlogI("Received message on topic %s: %s", topic.c_str(), mess.c_str());
     };
     mqtt->subscribe("some/topic");
 }

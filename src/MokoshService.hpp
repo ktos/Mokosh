@@ -30,7 +30,7 @@ public:
     // returns if the class has been set up properly
     virtual bool isSetup()
     {
-        return this->setupReady;
+        return this->setupFinished;
     }
 
     // returns a list of other services this service is dependent on
@@ -65,7 +65,7 @@ public:
     static const char *DEPENDENCY_MQTT;
 
 protected:
-    bool setupReady = false;
+    bool setupFinished = false;
 };
 
 class MokoshNetworkService : public MokoshService

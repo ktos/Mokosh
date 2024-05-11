@@ -11,7 +11,7 @@
 #include "MokoshConfig.hpp"
 #include "MokoshHandlers.hpp"
 #include "MokoshService.hpp"
-#include "DebugAdapter.hpp"
+#include "MokoshLogger.hpp"
 
 #define EVENTS_COUNT 10
 #define HEARTBEAT 10000
@@ -19,13 +19,11 @@
 #define SECONDS 1000
 #define HOURS 360000
 
-#define mdebug(lvl, fmt, ...) Mokosh::debug(lvl, __func__, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
-#define mdebugA(fmt, ...) Mokosh::debug(LogLevel::ANY, __func__, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
-#define mdebugE(fmt, ...) Mokosh::debug(LogLevel::ERROR, __func__, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
-#define mdebugI(fmt, ...) Mokosh::debug(LogLevel::INFO, __func__, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
-#define mdebugD(fmt, ...) Mokosh::debug(LogLevel::DEBUG, __func__, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
-#define mdebugV(fmt, ...) Mokosh::debug(LogLevel::VERBOSE, __func__, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
-#define mdebugW(fmt, ...) Mokosh::debug(LogLevel::WARNING, __func__, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
+#define mlogD(fmt, ...) Mokosh::log(LogLevel::DEBUG, __func__, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
+#define mlogV(fmt, ...) Mokosh::log(LogLevel::VERBOSE, __func__, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
+#define mlogI(fmt, ...) Mokosh::log(LogLevel::INFO, __func__, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
+#define mlogW(fmt, ...) Mokosh::log(LogLevel::WARNING, __func__, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
+#define mlogE(fmt, ...) Mokosh::log(LogLevel::ERROR, __func__, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
 
 enum MokoshErrors
 {
@@ -68,14 +66,14 @@ public:
     Mokosh *registerService(std::shared_ptr<MokoshService> service);
 
     // registers a debug adapter
-    Mokosh *registerDebugAdapter(const char *key, std::shared_ptr<DebugAdapter> service);
-    Mokosh *registerDebugAdapter(std::shared_ptr<DebugAdapter> service);
+    Mokosh *registerLogger(const char *key, std::shared_ptr<MokoshLogger> service);
+    Mokosh *registerLogger(std::shared_ptr<MokoshLogger> service);
 
     // prints message of a desired debug level to all debug adapters
     // uses func parameter to be used with __func__ so there will
     // be printed in what function debug happened
-    // use rather mdebug() macros instead of direct usage of this function
-    static void debug(LogLevel level, const char *func, const char *file, int line, const char *fmt, ...);
+    // use rather mlog() macros instead of direct usage of this function
+    static void log(LogLevel level, const char *func, const char *file, int line, const char *fmt, ...);
 
     // prints to the debug adapters the "busy" indicator
     static void debug_ticker_step();
@@ -209,7 +207,7 @@ public:
             return std::static_pointer_cast<T>(this->services[key]);
         else
         {
-            mdebugE("Service %s is not registered, returning NULL", key);
+            mlogE("Service %s is not registered, returning NULL", key);
             return nullptr;
         }
     }
@@ -235,7 +233,7 @@ private:
     bool isAfterBegin = false;
     bool isIPRetained = true;
 
-    LogLevel debugLevel = LogLevel::WARNING;
+    LogLevel currentLogLevel = LogLevel::WARNING;
 
     bool isConfigurationSet();
     bool reconnect();
@@ -249,7 +247,7 @@ private:
     std::vector<std::shared_ptr<TickTwo>> tickers;
     std::map<const char *, std::shared_ptr<MokoshService>> services;
 
-    static std::vector<std::shared_ptr<DebugAdapter>> debugAdapters;
+    static std::vector<std::shared_ptr<MokoshLogger>> loggers;
 };
 
 #include "MokoshResilience.hpp"

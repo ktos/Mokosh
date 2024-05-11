@@ -15,10 +15,10 @@ namespace MokoshResilience
         void increment()
         {
             this->counter++;
-            mdebugV("Incremented failure counter to %d!", this->counter);
+            mlogV("Incremented failure counter to %d!", this->counter);
 
             if (this->counter >= this->limit)
-                mdebugE("Failure counter exceeded threshold!");
+                mlogE("Failure counter exceeded threshold!");
         }
 
         void reset()
@@ -55,11 +55,11 @@ namespace MokoshResilience
                 if (i >= trials)
                     break;
 
-                mdebugV("Resilience operation failed, retrying in %d", time);
+                mlogV("Resilience operation failed, retrying in %d", time);
                 delay(time);
             }
 
-            mdebugV("Resilience operation failed after %d trials, giving up!", trials);
+            mlogV("Resilience operation failed after %d trials, giving up!", trials);
             return false;
         }
 

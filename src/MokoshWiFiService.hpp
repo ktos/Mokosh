@@ -42,7 +42,7 @@ public:
         WiFi.setHostname(fullHostName);
 #endif
 
-        this->setupReady = true;
+        this->setupFinished = true;
 
         return reconnect();
     }
@@ -99,7 +99,7 @@ public:
             WiFiMulti wifiMulti;
 
             String multi = config->get<String>(config->key_multi_ssid, "");
-            mdebugD("Will try multiple SSID");
+            mlogD("Will try multiple SSID");
 
             StaticJsonDocument<256> doc;
 
@@ -107,7 +107,7 @@ public:
 
             if (error)
             {
-                mdebugE("Configured multiple ssid is wrong, deserialization error %s", error.c_str());
+                mlogE("Configured multiple ssid is wrong, deserialization error %s", error.c_str());
                 return false;
             }
 
@@ -121,10 +121,10 @@ public:
 
             if (wifiMulti.run(10000) == WL_CONNECTED)
             {
-                mdebugI("Connected to %s", WiFi.SSID().c_str());
+                mlogI("Connected to %s", WiFi.SSID().c_str());
             }
 #else
-            mdebugE("Multiple SSIDs are not supported on ESP8266");
+            mlogE("Multiple SSIDs are not supported on ESP8266");
             return false;
 #endif
         }
@@ -135,7 +135,7 @@ public:
 
             if (ssid == "")
             {
-                mdebugE("Configured ssid is empty, cannot connect to Wi-Fi");
+                mlogE("Configured ssid is empty, cannot connect to Wi-Fi");
                 return false;
             }
 
@@ -173,7 +173,7 @@ public:
             return false;
         }
 
-        mdebugI("IP: %s", WiFi.localIP().toString().c_str());
+        mlogI("IP: %s", WiFi.localIP().toString().c_str());
         this->client = std::make_shared<WiFiClient>();
 
         return lastWifiStatus == WL_CONNECTED;

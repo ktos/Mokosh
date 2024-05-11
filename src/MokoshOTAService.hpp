@@ -41,7 +41,7 @@ namespace MokoshServices
             otaPort = mokosh->config->get<int>(mokosh->config->key_ota_port, 3232);
 #endif
 
-            mdebugV("OTA is enabled. OTA port: %d", otaPort);
+            mlogV("OTA is enabled. OTA port: %d", otaPort);
             ArduinoOTA.setPort(otaPort);
             ArduinoOTA.setHostname(mokosh->getHostName().c_str());
 
@@ -65,13 +65,13 @@ namespace MokoshServices
 
             this->isOTAInProgress = true;
 
-            mdebugI("OTA started. Updating %s", type.c_str());
+            mlogI("OTA started. Updating %s", type.c_str());
             if (moc.onStart != nullptr)
                 moc.onStart(); });
 
             ArduinoOTA.onEnd([&]()
                              {
-        mdebugI("OTA finished.");
+        mlogI("OTA finished.");
         LittleFS.begin();
         this->isOTAInProgress = false;
 
@@ -80,7 +80,7 @@ namespace MokoshServices
 
             ArduinoOTA.onProgress([moc](unsigned int progress, unsigned int total)
                                   {
-        mdebugV("OTA progress: %u%%\n", (progress / (total / 100)));
+        mlogV("OTA progress: %u%%\n", (progress / (total / 100)));
         if (moc.onProgress != nullptr)
             moc.onProgress(progress, total); });
 
@@ -98,7 +98,7 @@ namespace MokoshServices
         else if (error == OTA_END_ERROR)
             err = "end failed";
 
-        mdebugE("OTA failed with error %u (%s)", error, err.c_str());
+        mlogE("OTA failed with error %u (%s)", error, err.c_str());
 
         if (moc.onError != nullptr)
             moc.onError(error); });

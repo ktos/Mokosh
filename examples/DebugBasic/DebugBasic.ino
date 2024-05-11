@@ -5,13 +5,13 @@ Mokosh mokosh("Mokosh");
 // callback for custom command handling
 void customCommand(String command, String param)
 {
-    // you can use mdebugI, mdebugE and so on
+    // you can use mlogI, mlogE and so on
     // to automatically work with RemoteDebug
-    mdebugI("Received command on command channel: %s", command.c_str());
+    mlogI("Received command on command channel: %s", command.c_str());
 
     if (command == "hello")
     {
-        mdebugI("Hello.");
+        mlogI("Hello.");
     }
 }
 

@@ -6,7 +6,7 @@ void on_error(int code)
 {
     if (code == 201)
     {
-        mdebugE("Error 201!");
+        mlogE("Error 201!");
         pinMode(LED_BUILTIN, HIGH);
         delay(1000);
         pinMode(LED_BUILTIN, LOW);
@@ -14,7 +14,7 @@ void on_error(int code)
 
     if (code == 202)
     {
-        mdebugE("Error 202!");
+        mlogE("Error 202!");
     }
 }
 

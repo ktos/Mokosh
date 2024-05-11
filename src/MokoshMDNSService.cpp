@@ -18,14 +18,14 @@ namespace MokoshServices
         auto mokosh = Mokosh::getInstance();
         if (!MDNS.begin(mokosh->getHostNameWithPrefix()))
         {
-            mdebugE("MDNS couldn't be enabled");
+            mlogE("MDNS couldn't be enabled");
             return false;
         }
 
         this->addMDNSService("mokosh", "tcp", 23);
         this->addMDNSServiceProps("mokosh", "tcp", "version", mokosh->getVersion().c_str());
 
-        this->setupReady = true;
+        this->setupFinished = true;
 
         return true;
     }

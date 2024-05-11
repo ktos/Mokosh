@@ -26,7 +26,7 @@ public:
     {
         if (!this->config.containsKey(field))
         {
-            // mdebugW("config.json field %s does not exist!", field);
+            // mlogW("config.json field %s does not exist!", field);
             return def;
         }
 
