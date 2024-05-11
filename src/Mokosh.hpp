@@ -87,7 +87,6 @@ public:
 
     // defines callback to be run when command not handled by internal
     // means is received
-    // must be set before begin()
     THandlerFunction_Command onCommand;
 
     // defines callback to be run when error is thrown

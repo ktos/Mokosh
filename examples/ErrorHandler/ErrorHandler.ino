@@ -20,13 +20,13 @@ void on_error(int code)
 
 void setup()
 {
-    pinMode(LED_BUILTIN, OUTPUT);
+    pinMode(2, OUTPUT);
     // custom error handler
     m.onError = on_error;
 
     m.setLogLevel(LogLevel::VERBOSE);
 
-    m.begin("Mokosh");
+    m.begin();
 }
 
 void loop()

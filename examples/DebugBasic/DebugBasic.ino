@@ -1,9 +1,9 @@
 #include <Mokosh.hpp>
 
-Mokosh mokosh;
+Mokosh mokosh("Mokosh");
 
 // callback for custom command handling
-void customCommand(String command)
+void customCommand(String command, String param)
 {
     // you can use mdebugI, mdebugE and so on
     // to automatically work with RemoteDebug
@@ -24,7 +24,7 @@ void setup()
 
     // no custom configuration is set, so it will try to load
     // from /config.json in LittleFS
-    mokosh.begin("Mokosh");
+    mokosh.begin();
 }
 
 void loop()
