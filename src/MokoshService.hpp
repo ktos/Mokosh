@@ -9,7 +9,7 @@
 #include <Client.h>
 #endif
 
-#if defined(NRF52)
+#if defined(NRF52) || defined(NRF52840_XXAA)
 #include <Client.h>
 #endif
 
@@ -18,7 +18,7 @@ class MokoshConfig;
 
 #if defined(ESP8266) || defined(ESP32)
 typedef std::function<void(String, uint8_t *msg, unsigned int length)> THandlerFunction_Message;
-#elif defined(NRF52)
+#elif defined(NRF52) || defined(NRF52840_XXAA)
 typedef void (*THandlerFunction_Message)(String, uint8_t *, unsigned int);
 #endif
 
