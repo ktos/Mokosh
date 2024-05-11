@@ -112,6 +112,8 @@ bool MokoshConfig::setup(std::shared_ptr<Mokosh> mokosh)
     if (this->useFileSystem)
         this->reloadFromFile();
 
+    this->setupReady = true;
+
     return true;
 }
 

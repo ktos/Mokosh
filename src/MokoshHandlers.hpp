@@ -18,5 +18,6 @@ public:
 class MokoshEvents
 {
 public:
+    // happens only if Wi-Fi is not used and network connection is requested
     THandlerFunction onReconnectRequested;
 };

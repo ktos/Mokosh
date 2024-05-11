@@ -5,7 +5,12 @@
 #include <memory>
 #include <vector>
 
+#if defined(ESP8266)
+#include <Client.h>
+#endif
+
 class Mokosh;
+class MokoshConfig;
 
 // a class representing a Mokosh Service, a class which is started
 // with dependency on another classes and is being looped along with others
@@ -59,6 +64,53 @@ public:
 
 protected:
     bool setupReady = false;
+};
+
+class MokoshNetworkService : public MokoshService
+{
+public:
+    virtual std::shared_ptr<Client> getClient() = 0;
+
+    virtual bool isConnected() = 0;
+
+    virtual String getIP() = 0;
+
+    virtual bool reconnect(std::shared_ptr<MokoshConfig> config) = 0;
+};
+
+class MokoshMqttService : public MokoshService
+{
+public:
+    virtual bool isConnected() = 0;
+    virtual bool reconnect() = 0;
+
+    // publishes a new message on a given topic with a given payload
+    virtual void publishRaw(const char *topic, const char *payload, bool retained) = 0;
+
+    // publishes a new message on a Prefix_ABCDE/subtopic topic with
+    // a given payload
+    virtual void publish(const char *subtopic, String payload)
+    {
+        this->publish(subtopic, payload.c_str());
+    }
+
+    // publishes a new message on a Prefix_ABCDE/subtopic topic with
+    // a given payload
+    virtual void publish(const char *subtopic, const char *payload)
+    {
+        this->publish(subtopic, payload, false);
+    }
+
+    // publishes a new message on a Prefix_ABCDE/subtopic topic with
+    // a given payload
+    virtual void publish(const char *subtopic, const char *payload, bool retained) = 0;
+
+    // publishes a new message on a Prefix_ABCDE/subtopic topic with
+    // a given payload
+    virtual void publish(const char *subtopic, float payload)
+    {
+        this->publish(subtopic, String(payload));
+    }
 };
 
 #endif

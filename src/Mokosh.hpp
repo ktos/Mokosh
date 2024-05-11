@@ -2,19 +2,7 @@
 
 #define MOKOSH
 
-#include <Arduino.h>
-#if defined(ESP8266)
-#include <ESP8266WiFi.h>
-#include <LittleFS.h>
-#endif
-
-#if defined(ESP32)
-#include <LittleFS.h>
-#include <WiFiMulti.h>
-#endif
-
-#include <PubSubClient.h>
-#include <RemoteDebug.h>
+// #include <PubSubClient.h>
 #include <TickTwo.h>
 #include <vector>
 #include <map>
@@ -83,25 +71,6 @@ public:
     Mokosh *registerDebugAdapter(const char *key, std::shared_ptr<DebugAdapter> service);
     Mokosh *registerDebugAdapter(std::shared_ptr<DebugAdapter> service);
 
-    // publishes a new message on a Prefix_ABCDE/subtopic topic with
-    // a given payload
-    void publish(const char *subtopic, String payload);
-
-    // publishes a new message on a Prefix_ABCDE/subtopic topic with
-    // a given payload
-    void publish(const char *subtopic, const char *payload);
-
-    // publishes a new message on a Prefix_ABCDE/subtopic topic with
-    // a given payload, allows to specify if payload should be retained
-    void publish(const char *subtopic, const char *payload, boolean retained);
-
-    // publishes a new message on a Prefix_ABCDE/subtopic topic with
-    // a given payload
-    void publish(const char *subtopic, float payload);
-
-    // returns internal PubSubClient instance
-    PubSubClient *getPubSubClient();
-
     // prints message of a desired debug level to all debug adapters
     // uses func parameter to be used with __func__ so there will
     // be printed in what function debug happened
@@ -169,9 +138,6 @@ public:
     // this is a PRIVATE function, exposed only as a workaround
     void _processCommand(String command);
 
-    // event handlers for Wi-Fi situations (onConnect, onDisconnect)
-    MokoshWiFiHandlers wifiEvents;
-
     // handlers for additional events
     MokoshEvents events;
 
@@ -190,25 +156,19 @@ public:
     // e.g. on Scaleway retained flag forces disconnect of the client
     Mokosh *setIPRetained(bool value);
 
-    // returns if Wi-Fi is connected at all
-    bool isWifiConnected();
-
     // sends "hello" packet with version number and sets up heartbeat
     // is being automatically run on begin() if autoconnect is true
     void hello();
-
-    // sets up Wi-Fi client
-    // is being automatically run on begin() if autoconnect is true
-    void setupWiFiClient();
 
     // sets up MQTT client
     // is being automatically run on begin() if autoconnect is true
     void setupMqttClient();
 
-    // sets up communication using the custom Client instance (e.g. GSM)
-    // remember to use at least setupMqttClient() and hello() after using
-    // this, autoconnect should be disabled
-    Mokosh *setCustomClient(Client &client);
+    // returns an instance of the networking service
+    std::shared_ptr<MokoshNetworkService> getNetworkService();
+
+    // returns an instance of the networking service
+    std::shared_ptr<MokoshMqttService> getMqttService();
 
     // a configuration object to set and read configs
     std::shared_ptr<MokoshConfig> config;
@@ -225,12 +185,6 @@ public:
     // returns prefix and hostname combination which are used for device ident
     String getHostNameWithPrefix();
 
-    // connects to Wi-Fi, manually
-    wl_status_t connectWifi();
-
-    // returns used Wi-Fi (or custom) client
-    Client *getClient();
-
     // vector of tickers, functions run on the given interval
     std::vector<std::shared_ptr<TickTwo>> getTickers();
 
@@ -238,7 +192,7 @@ public:
     // one time (one-shot), and time tracking starts immediately
     void registerTimeoutFunction(fptr func, unsigned long time, int runs = 1, bool start = true);
 
-    // returns a version string registered before build()
+    // returns a version string registered and published everywhere
     String getVersion();
 
     // sets up all registered services
@@ -252,10 +206,17 @@ public:
     bool isServiceRegistered(const char *key);
 
     // returns a service by a name and downcast to the specified type
+    // or null of there is no such service
     template <typename T>
     std::shared_ptr<T> getRegisteredService(const char *key)
     {
-        return std::static_pointer_cast<T>(this->services[key]);
+        if (this->isServiceRegistered(key))
+            return std::static_pointer_cast<T>(this->services[key]);
+        else
+        {
+            mdebugE("Service %s is not registered, returning NULL", key);
+            return nullptr;
+        }
     }
 
     // returns all registered services
@@ -266,31 +227,22 @@ public:
 
 private:
     String hostName;
-    char hostNameC[32];
     String prefix;
     String version = "1.0.0";
-
-    Client *client;
-    PubSubClient *mqtt;
 
     bool isFSEnabled = true;
     bool isRebootOnError = false;
     bool isOTAEnabled = false;
     bool isOTAInProgress = false;
-    bool isMqttConfigured = false;
     bool isIgnoringConnectionErrors = false;
     bool isForceWifiReconnect = false;
-    bool isWifiConfigured = false;
     bool isHeartbeatEnabled = true;
     bool isAfterBegin = false;
     bool isIPRetained = true;
-    wl_status_t lastWifiStatus;
 
     LogLevel debugLevel = LogLevel::WARNING;
 
-    bool configFileExists();
     bool isConfigurationSet();
-    bool configureMqttClient();
     bool reconnect();
 
     void publishShortVersion();
@@ -299,8 +251,6 @@ private:
     // initialization of tickers, is called automatically by begin()
     void initializeTickers();
 
-    char ssid[16] = {0};
-
     std::vector<std::shared_ptr<TickTwo>> tickers;
     std::map<const char *, std::shared_ptr<MokoshService>> services;
 
@@ -308,5 +258,7 @@ private:
 };
 
 #include "MokoshResilience.hpp"
+#include "MokoshWiFiService.hpp"
+#include "PubSubClientService.hpp"
 
 #endif
