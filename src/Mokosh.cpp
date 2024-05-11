@@ -140,7 +140,7 @@ void Mokosh::begin(bool autoconnect)
     // if there is no "NETWORK" providing service registered previously (before begin()),
     // register a Wi-Fi network providing service, if autoconnect is true,
     // as well as MQTT provider
-    if (autoconnect && !this->isServiceRegistered(MokoshService::DEPENDENCY_NETWORK))
+    if (!this->isOffline && autoconnect && !this->isServiceRegistered(MokoshService::DEPENDENCY_NETWORK))
     {
         mlogD("autoconnect, registering Wi-Fi as a network provider");
         auto network = std::make_shared<MokoshWiFiService>();
@@ -212,38 +212,76 @@ void Mokosh::publishIP()
     }
 }
 
+Mokosh *Mokosh::setOffline(bool value)
+{
+    this->isOffline = value;
+    return this;
+}
+
 bool Mokosh::reconnect()
 {
 #if defined(ESP32) || defined(ESP8266)
-    auto network = this->getRegisteredService<MokoshWiFiService>(MokoshService::DEPENDENCY_NETWORK);
-
-    if (network == nullptr)
+    if (!this->isOffline)
     {
-        if (this->isIgnoringConnectionErrors)
-        {
-            mlogV("Network is not configured, but ignoring.");
-            return true;
-        }
-        else
-        {
-            mlogE("Network is not configured.");
-            return false;
-        }
-    }
+        auto network = this->getRegisteredService<MokoshWiFiService>(MokoshService::DEPENDENCY_NETWORK);
 
-    if (!network->isConnected())
-    {
-        if (this->isIgnoringConnectionErrors)
+        if (network == nullptr)
         {
-            mlogV("Network is not connected, but ignoring.");
-            return true;
+            if (this->isIgnoringConnectionErrors)
+            {
+                mlogV("Network is not configured, but ignoring.");
+                return true;
+            }
+            else
+            {
+                mlogE("Network is not configured.");
+                return false;
+            }
         }
-        else
+
+        if (!network->isConnected())
+        {
+            if (this->isIgnoringConnectionErrors)
+            {
+                mlogV("Network is not connected, but ignoring.");
+                return true;
+            }
+            else
+            {
+                if (this->isForceNetworkReconnect)
+                {
+                    mlogI("Network is not connected, forcing reconnect.");
+                    network->reconnect();
+                }
+                else
+                {
+                    mlogE("Network is not connected, but force-reconnect is disabled");
+                    return false;
+                }
+            }
+        }
+
+        auto mqtt = this->getMqttService();
+        if (mqtt == nullptr)
+        {
+            if (this->isIgnoringConnectionErrors)
+            {
+                mlogV("MQTT is not configured, but ignoring.");
+                return true;
+            }
+            else
+            {
+                mlogE("MQTT is not configured.");
+                return false;
+            }
+        }
+
+        if (network->isConnected() && !mqtt->isConnected())
         {
             if (this->isForceNetworkReconnect)
             {
-                mlogI("Network is not connected, forcing reconnect.");
-                network->reconnect();
+                mlogI("MQTT is not connected, forcing reconnect.");
+                mqtt->reconnect();
             }
             else
             {
@@ -251,38 +289,11 @@ bool Mokosh::reconnect()
                 return false;
             }
         }
+
+        return network->isConnected() && mqtt->isConnected();
     }
 
-    auto mqtt = this->getMqttService();
-    if (mqtt == nullptr)
-    {
-        if (this->isIgnoringConnectionErrors)
-        {
-            mlogV("MQTT is not configured, but ignoring.");
-            return true;
-        }
-        else
-        {
-            mlogE("MQTT is not configured.");
-            return false;
-        }
-    }
-
-    if (network->isConnected() && !mqtt->isConnected())
-    {
-        if (this->isForceNetworkReconnect)
-        {
-            mlogI("MQTT is not connected, forcing reconnect.");
-            mqtt->reconnect();
-        }
-        else
-        {
-            mlogE("Network is not connected, but force-reconnect is disabled");
-            return false;
-        }
-    }
-
-    return network->isConnected() && mqtt->isConnected();
+    return true;
 #else
     return true;
 #endif
@@ -635,16 +646,18 @@ Mokosh *Mokosh::registerLogger(const char *key, std::shared_ptr<MokoshLogger> se
 
 bool Mokosh::setupService(const char *key, std::shared_ptr<MokoshService> service)
 {
-    auto network = this->getNetworkService();
-    auto mqtt = this->getRegisteredService<MokoshMqttService>(MokoshService::DEPENDENCY_MQTT);
+    // auto network = this->getNetworkService();
+    // auto mqtt = this->getRegisteredService<MokoshMqttService>(MokoshService::DEPENDENCY_MQTT);
+    bool isNetwork = this->isServiceRegistered(MokoshService::DEPENDENCY_NETWORK);
+    bool isMqtt = this->isServiceRegistered(MokoshService::DEPENDENCY_MQTT);
 
-    if (isDependentOn(service, MokoshService::DEPENDENCY_NETWORK) && (network == nullptr))
+    if (isDependentOn(service, MokoshService::DEPENDENCY_NETWORK) && !isNetwork)
     {
         mlogE("Network dependent service %s cannot be set up because Network is not configured", key);
         return this;
     }
 
-    if (isDependentOn(service, MokoshService::DEPENDENCY_MQTT) && (network == nullptr || mqtt == nullptr))
+    if (isDependentOn(service, MokoshService::DEPENDENCY_MQTT) && (!isNetwork || !isMqtt))
     {
         mlogE("MQTT dependent service %s cannot be set up because Network or MQTT are not configured", key);
         return this;

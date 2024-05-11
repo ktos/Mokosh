@@ -141,6 +141,10 @@ public:
     // available
     Mokosh *setIgnoreConnectionErrors(bool value);
 
+    // sets if the offline mode is enabled, which clears all the logs
+    // about networking connections
+    Mokosh *setOffline(bool value);
+
     // sets if the Wi-Fi should be reconnected on MQTT reconnect if needed
     Mokosh *setForceWiFiReconnect(bool value);
 
@@ -209,7 +213,7 @@ public:
             return std::static_pointer_cast<T>(this->services[key]);
         else
         {
-            mlogE("Service %s is not registered, returning NULL", key);
+            mlogW("Service %s is not registered, returning NULL", key);
             return nullptr;
         }
     }
@@ -234,6 +238,7 @@ private:
     bool isHeartbeatEnabled = true;
     bool isAfterBegin = false;
     bool isIPRetained = true;
+    bool isOffline = false;
 
     LogLevel currentLogLevel = LogLevel::WARNING;
 
