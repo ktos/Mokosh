@@ -2,34 +2,39 @@
 
 Mokosh m;
 
-void on_error(int code) {
-    if (code == 201) {
+void on_error(int code)
+{
+    if (code == 201)
+    {
         mdebugE("Error 201!");
         pinMode(LED_BUILTIN, HIGH);
         delay(1000);
         pinMode(LED_BUILTIN, LOW);
     }
 
-    if (code == 202) {
+    if (code == 202)
+    {
         mdebugE("Error 202!");
     }
 }
 
-void setup() {
-    pinMode(LED_BUILTIN, OUTPUT);
+void setup()
+{
+    pinMode(2, OUTPUT);
     // custom error handler
     m.onError = on_error;
 
-    m.setDebugLevel(DebugLevel::VERBOSE);
+    m.setLogLevel(LogLevel::VERBOSE);
 
-    m.begin("Mokosh");
+    m.begin();
 }
 
-void loop() {
+void loop()
+{
     delay(1000);
     m.error(201); // error code 201
     delay(1000);
     m.error(202);
-    
-    m.loop();    
+
+    m.loop();
 }

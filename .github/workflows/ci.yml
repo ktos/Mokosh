@@ -8,10 +8,10 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:        
-        example: [examples/DebugBasic/DebugBasic.ino, examples/ErrorBasic/ErrorBasic.ino, examples/IntervalBasic/IntervalBasic.ino, examples/WifiMqtt/WifiMqtt.ino]
+        example: [examples/DebugBasic/DebugBasic.ino, examples/ErrorBasic/ErrorBasic.ino, examples/IntervalBasic/IntervalBasic.ino, examples/WifiMqtt/WifiMqtt.ino, examples/MqttSubscribe/MqttSubscribe.ino, examples/MDNSService/MDNSService.ino]
 
     steps:
-    - uses: actions/checkout@44c2b7a8a4ea60a981eaca3cf939b5f4305c123b # v4
+    - uses: actions/checkout@v4
     - name: Cache pip
       uses: actions/cache@v4
       with:
@@ -35,8 +35,7 @@ jobs:
 
     - name: Install library dependencies
       run: | 
-        pio pkg install -g -l bblanchon/ArduinoJson@~6.21.1
-        pio pkg install -g -l https://github.com/ktos/RemoteDebug#v3.0.7
+        pio pkg install -g -l bblanchon/ArduinoJson@^6.21.5        
         pio pkg install -g -l knolleary/PubSubClient@2.8.0
         pio pkg install -g -l sstaub/TickTwo@4.4.0
 

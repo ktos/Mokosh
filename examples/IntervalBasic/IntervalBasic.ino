@@ -1,15 +1,16 @@
 #include <Mokosh.hpp>
 
-Mokosh mokosh;
+Mokosh mokosh("Mokosh");
 
 void some_func()
 {
-    mokosh.publish("test", "alive!");
+    auto mqtt = mokosh.getMqttService();
+    mqtt->publish("test", "alive!");
 }
 
 void setup()
 {
-    mokosh.begin("Mokosh");
+    mokosh.begin();
 
     mokosh.registerIntervalFunction(some_func, 1200); // register some_func to run every 1.2 seconds
 }

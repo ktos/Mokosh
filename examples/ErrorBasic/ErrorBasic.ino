@@ -2,13 +2,15 @@
 
 Mokosh m;
 
-void setup() {
+void setup()
+{
     // will automatically reboot if error is met
     m.setRebootOnError(true);
-    m.begin("Mokosh");    
+    m.begin();
 }
 
-void loop() {
+void loop()
+{
     delay(1000);
     m.error(201); // throw error code 201 (will reboot)
 }

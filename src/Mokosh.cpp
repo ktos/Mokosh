@@ -2,20 +2,66 @@
 
 static Mokosh *_instance;
 
-void _mqtt_callback(char *topic, uint8_t *message, unsigned int length)
-{
-    _instance->_mqttCommandReceived(topic, message, length);
-}
+std::vector<std::shared_ptr<DebugAdapter>> Mokosh::debugAdapters;
 
-RemoteDebug Debug;
-
-Mokosh::Mokosh()
+Mokosh::Mokosh(String prefix, String version, bool useFilesystem, bool useSerial)
 {
     _instance = this;
-    Mokosh::debugReady = false;
+
+    this->version = version;
+
+    if (useSerial)
+    {
+        Serial.begin(115200);
+        Serial.println();
+        Serial.println();
+        Serial.print("Hi, I'm ");
+        Serial.print(prefix);
+        Serial.println(".");
+
+        this->registerDebugAdapter("SERIAL_DEBUG", std::make_shared<SerialDebugAdapter>());
+    }
+
+    char hostString[16] = {0};
+#if defined(ESP8266)
+    sprintf(hostString, "%06X", ESP.getChipId());
+#elif defined(ESP32)
+    // strange bit manipulations to extract only 24 bits of MAC
+    // like in ESP8266
+    uint32_t chipId = 0;
+    for (int i = 0; i < 17; i = i + 8)
+    {
+        chipId |= ((ESP.getEfuseMac() >> (40 - i)) & 0xff) << i;
+    }
+
+    sprintf(hostString, "%06X", chipId);
+#else
+#error Use OVERRIDE_HOSTNAME or implement ChipID for this platform
+#endif
+
+    this->prefix = prefix;
+    this->hostName = String(hostString);
+
+#ifdef OVERRIDE_HOSTNAME
+    this->hostName = OVERRIDE_HOSTNAME;
+#endif
+
+#ifndef OVERRIDE_HOSTNAME
+    mdebugV("ID: %s", hostString);
+#else
+    mdebugV("ID: %s, overridden to %s", hostString, OVERRIDE_HOSTNAME);
+#endif
+
+    // config service is set up in the beginning, and immediately
+    this->registerService(MokoshConfig::KEY, std::make_shared<MokoshConfig>(useFilesystem));
+    this->config = this->getRegisteredService<MokoshConfig>(MokoshConfig::KEY);
+    if (!this->config->setup())
+    {
+        mdebugE("Configuration Service failed!");
+    }
 }
 
-void Mokosh::debug(DebugLevel level, const char *func, const char *file, int line, const char *fmt, ...)
+void Mokosh::debug(LogLevel level, const char *func, const char *file, int line, const char *fmt, ...)
 {
     char dest[256];
     va_list argptr;
@@ -23,208 +69,35 @@ void Mokosh::debug(DebugLevel level, const char *func, const char *file, int lin
     vsprintf(dest, fmt, argptr);
     va_end(argptr);
 
-    if (!_instance->isDebugReady())
+    for (auto &adapter : Mokosh::debugAdapters)
     {
-        char lvl;
-        switch (level)
+        if (adapter->isActive(level))
         {
-        case DebugLevel::DEBUG:
-            lvl = 'D';
-            break;
-        case DebugLevel::ERROR:
-            lvl = 'E';
-            break;
-        case DebugLevel::INFO:
-            lvl = 'I';
-            break;
-        case DebugLevel::WARNING:
-            lvl = 'W';
-            break;
-        case DebugLevel::VERBOSE:
-            lvl = 'V';
-            break;
-        default:
-            lvl = 'A';
+            adapter->debugf(level, func, file, line, millis(), dest);
         }
-
-        Serial.printf("L (%c t:%ldms) (%s %s:%d) %s\n", lvl, millis(), func, file, line, dest);
     }
+}
 
-    if (Debug.isActive((uint8_t)level))
+void Mokosh::debug_ticker_step()
+{
+    for (auto &adapter : Mokosh::debugAdapters)
     {
-        Debug.printf("(%s %s:%d) %s\n", func, file, line, dest);
+        adapter->ticker_step();
     }
 }
 
-bool Mokosh::isDebugReady()
+void Mokosh::debug_ticker_finish(bool success)
 {
-    return this->debugReady;
-}
-
-bool Mokosh::configureMqttClient()
-{
-    IPAddress broker;
-    String brokerAddress = this->config.get<String>(this->config.key_broker);
-    if (brokerAddress == "")
+    for (auto &adapter : Mokosh::debugAdapters)
     {
-        mdebugE("MQTT configuration is not provided!");
-        return false;
+        adapter->ticker_finish(success);
     }
-    uint16_t brokerPort = this->config.get<int>(this->config.key_broker_port, 1883);
-
-    // it it is an IP address
-    if (broker.fromString(brokerAddress))
-    {
-        this->mqtt->setServer(broker, brokerPort);
-        mdebugD("MQTT broker set to %s port %d", broker.toString().c_str(), brokerPort);
-    }
-    else
-    {
-        // so it must be a domain name
-        this->mqtt->setServer(brokerAddress.c_str(), brokerPort);
-        mdebugD("MQTT broker set to %s port %d", brokerAddress.c_str(), brokerPort);
-    }
-
-    this->isMqttConfigured = true;
-    return true;
-}
-
-void handleRemoteDebugCommand()
-{
-    String cmd = Debug.getLastCommand();
-    _instance->_processCommand(cmd);
-}
-
-void Mokosh::setupRemoteDebug()
-{
-    Debug.begin(this->hostName, (uint8_t)this->debugLevel);
-    Debug.setSerialEnabled(true);
-    Debug.setResetCmdEnabled(true);
-    Debug.showTime(true);
-    Debug.setCallBackProjectCmds(handleRemoteDebugCommand);
-
-    this->debugReady = true;
-}
-
-void Mokosh::setupWiFiClient()
-{
-    mdebugI("IP: %s", WiFi.localIP().toString().c_str());
-
-    this->client = new WiFiClient();
-}
-
-Mokosh *Mokosh::setCustomClient(Client &client)
-{
-    this->client = &client;
-    return this;
 }
 
 Mokosh *Mokosh::setIPRetained(bool value)
 {
     this->isIPRetained = value;
     return this;
-}
-
-void Mokosh::setupMqttClient()
-{
-    this->mqtt = new PubSubClient(*(this->client));
-
-    if (this->configureMqttClient())
-    {
-        if (!this->reconnect())
-        {
-            if (!this->isIgnoringConnectionErrors)
-                this->error(MokoshErrors::MqttConnectionFailed);
-        }
-    }
-}
-
-void Mokosh::setupMDNS()
-{
-    if (!MDNS.begin(this->hostNameC))
-    {
-        mdebugE("MDNS couldn't be enabled");
-        return;
-    }
-
-    this->addMDNSService("mokosh", "tcp", 23);
-    this->addMDNSServiceProps("mokosh", "tcp", "version", this->version.c_str());
-}
-
-void Mokosh::setupOta()
-{
-    uint16_t otaPort = 3232;
-#if defined(ESP8266)
-    otaPort = this->config.get<int>(this->config.key_ota_port, 8266);
-#endif
-
-#if defined(ESP32)
-    otaPort = this->config.get<int>(this->config.key_ota_port, 3232);
-#endif
-
-    mdebugV("OTA is enabled. OTA port: %d", otaPort);
-    ArduinoOTA.setPort(otaPort);
-    ArduinoOTA.setHostname(this->hostNameC);
-
-    String hash = this->config.get<String>(this->config.key_ota_password);
-    if (hash != "")
-        ArduinoOTA.setPasswordHash(hash.c_str());
-
-    MokoshOTAHandlers moc = this->otaEvents;
-
-    ArduinoOTA
-        .onStart([&]()
-                 {
-            String type;
-            if (ArduinoOTA.getCommand() == U_FLASH) {
-                type = "sketch";
-            } else {
-                // U_SPIFFS
-                type = "filesystem";
-                LittleFS.end();
-            }
-
-            this->isOTAInProgress = true;
-
-            mdebugI("OTA started. Updating %s", type.c_str());
-            if (moc.onStart != nullptr)
-                moc.onStart(); });
-
-    ArduinoOTA.onEnd([&]()
-                     {
-        mdebugI("OTA finished.");
-        LittleFS.begin();
-        this->isOTAInProgress = false;
-
-        if (moc.onEnd != nullptr)
-            moc.onEnd(); });
-
-    ArduinoOTA.onProgress([moc](unsigned int progress, unsigned int total)
-                          {
-        mdebugV("OTA progress: %u%%\n", (progress / (total / 100)));
-        if (moc.onProgress != nullptr)
-            moc.onProgress(progress, total); });
-
-    ArduinoOTA.onError([moc](ota_error_t error)
-                       {
-        String err;
-        if (error == OTA_AUTH_ERROR)
-            err = "auth error";
-        else if (error == OTA_BEGIN_ERROR)
-            err = "begin failed";
-        else if (error == OTA_CONNECT_ERROR)
-            err = "connect failed";
-        else if (error == OTA_RECEIVE_ERROR)
-            err = "receive failed";
-        else if (error == OTA_END_ERROR)
-            err = "end failed";
-
-        mdebugE("OTA failed with error %u (%s)", error, err.c_str());
-
-        if (moc.onError != nullptr)
-            moc.onError(error); });
-
-    ArduinoOTA.begin();
 }
 
 std::vector<std::shared_ptr<TickTwo>> Mokosh::getTickers()
@@ -243,7 +116,7 @@ void Mokosh::hello()
         this->registerIntervalFunction([&]()
                                        {
             if (this->isHeartbeatEnabled)
-                publish(_instance->heartbeat_topic, millis()); },
+                this->getMqttService()->publish(_instance->heartbeat_topic, millis()); },
                                        HEARTBEAT);
     }
 }
@@ -257,102 +130,67 @@ void Mokosh::initializeTickers()
     }
 }
 
-void Mokosh::begin(String prefix, bool autoconnect)
+String Mokosh::getVersion()
 {
-    Serial.begin(115200);
-    Serial.println();
-    Serial.println();
-    Serial.print("Hi, I'm ");
-    Serial.print(prefix);
-    Serial.println(".");
+    return this->version;
+}
 
-    char hostString[16] = {0};
-#if defined(ESP8266)
-    sprintf(hostString, "%06X", ESP.getChipId());
-#endif
-
-#if defined(ESP32)
-    // strange bit manipulations to extract only 24 bits of MAC
-    // like in ESP8266
-    uint32_t chipId = 0;
-    for (int i = 0; i < 17; i = i + 8)
+void Mokosh::begin(bool autoconnect)
+{
+    // if there is no "NETWORK" providing service registered previously (before begin()),
+    // register a Wi-Fi network providing service, if autoconnect is true,
+    // as well as MQTT provider
+    if (autoconnect && !this->isServiceRegistered(MokoshService::DEPENDENCY_NETWORK))
     {
-        chipId |= ((ESP.getEfuseMac() >> (40 - i)) & 0xff) << i;
-    }
+        mdebugD("autoconnect, registering Wi-Fi as a network provider");
+        auto network = std::make_shared<MokoshWiFiService>();
+        this->registerService(MokoshService::DEPENDENCY_NETWORK, network);
 
-    sprintf(hostString, "%06X", chipId);
-#endif
+        // run immediately, before all other services
+        bool isConnected = MokoshResilience::Retry::retry([&network]()
+                                                          { return network->setup(); }, 3, 5000, 1);
 
-    lastWifiStatus = WiFi.status();
-
-    this->prefix = prefix;
-    this->hostName = String(hostString);
-
-#ifdef OVERRIDE_HOSTNAME
-    this->hostName = OVERRIDE_HOSTNAME;
-#endif
-
-    strcpy(this->hostNameC, hostName.c_str());
-
-#ifndef OVERRIDE_HOSTNAME
-    mdebugD("ID: %s", hostString);
-#else
-    mdebugD("ID: %s, overridden to %s", hostString, OVERRIDE_HOSTNAME);
-#endif
-
-    if (this->isFSEnabled)
-    {
-        if (!this->config.prepareFS())
+        if (!isConnected)
         {
-            this->error(MokoshErrors::FileSystemNotAvailable);
+            this->error(MokoshErrors::NetworkConnectionFailed);
         }
 
-        this->config.reload();
-    }
-
-    if (autoconnect)
-    {
-        this->connectWifi();
-        if (this->lastWifiStatus == WL_CONNECTED)
+        if (!this->isServiceRegistered(MokoshService::DEPENDENCY_MQTT))
         {
-            this->setupRemoteDebug();
-            this->setupWiFiClient();
-            this->setupMqttClient();
+            mdebugD("autoconnect, registering default MQTT provider");
+            auto mqtt = std::make_shared<PubSubClientService>();
+            this->registerService(MokoshService::DEPENDENCY_MQTT, mqtt);
 
-            if (this->isMDNSEnabled)
-            {
-                this->setupMDNS();
-            }
+            // run immediately, before all other services
+            bool isConnected = MokoshResilience::Retry::retry([&mqtt]()
+                                                              { return mqtt->setup(); }, 3, 5000, 1);
 
-            if (this->isOTAEnabled)
+            if (!isConnected)
             {
-                this->setupOta();
-            }
-
-            this->hello();
-            this->isWifiConfigured = true;
-        }
-        else
-        {
-            if (!this->isIgnoringConnectionErrors)
-            {
-                this->error(MokoshErrors::CannotConnectToWifi);
-            }
-            else
-            {
-                mdebugD("Wi-Fi connection error, ignored.");
+                this->error(MokoshErrors::MqttConnectionFailed);
             }
         }
-    }
-    else
-    {
-        mdebugI("Auto network connection was disabled!");
+
+        this->hello();
     }
 
+    // set up tickers and all services
     initializeTickers();
+    this->setupServices();
 
     mdebugI("Starting operations...");
     isAfterBegin = true;
+}
+
+std::shared_ptr<MokoshMqttService> Mokosh::getMqttService()
+{
+    return this->getRegisteredService<MokoshMqttService>(MokoshService::DEPENDENCY_MQTT);
+}
+
+std::shared_ptr<MokoshNetworkService> Mokosh::getNetworkService()
+{
+    auto network = this->getRegisteredService<MokoshNetworkService>(MokoshService::DEPENDENCY_NETWORK);
+    return network;
 }
 
 void Mokosh::publishIP()
@@ -360,118 +198,91 @@ void Mokosh::publishIP()
     char msg[64] = {0};
     char ipbuf[15] = {0};
 
-    if (this->isWifiConnected())
+    if (this->getNetworkService() && this->getNetworkService()->isConnected())
     {
         WiFi.localIP().toString().toCharArray(ipbuf, 15);
         snprintf(msg, sizeof(msg) - 1, "{\"ipaddress\": \"%s\"}", ipbuf);
 
         mdebugV("Sending IP");
-        this->publish(debug_ip_topic, msg, this->isIPRetained);
+        this->getMqttService()->publish(debug_ip_topic, msg, this->isIPRetained);
     }
-}
-
-Mokosh *Mokosh::setConfigFile(bool value)
-{
-    if (this->isAfterBegin)
-    {
-        mdebugE("Must be called before begin()");
-        return this;
-    }
-
-    this->isFSEnabled = value;
-    return this;
 }
 
 bool Mokosh::reconnect()
 {
-    if (this->mqtt->connected())
-        return true;
+    auto network = this->getRegisteredService<MokoshWiFiService>(MokoshService::DEPENDENCY_NETWORK);
 
-    if (this->isWifiConfigured)
+    if (network == nullptr)
     {
-        if (!this->isWifiConnected() && this->isForceWifiReconnect)
+        if (this->isIgnoringConnectionErrors)
         {
-            mdebugV("Wi-Fi is not connected at all, forcing reconnect.");
-            bool result = this->connectWifi();
-            if (!result)
-            {
-                if (this->isIgnoringConnectionErrors)
-                {
-                    mdebugE("Failed to reconnect to Wi-Fi");
-                }
-                else
-                {
-                    this->error(MokoshErrors::CannotConnectToWifi);
-                }
-            }
-        }
-    }
-    else
-    {
-        mdebugV("Wi-Fi is not configured, raising onReconnectRequest event.");
-        if (this->events.onReconnectRequested != nullptr)
-        {
-            this->events.onReconnectRequested();
-        }
-    }
-
-    uint8_t trials = 0;
-
-    while (!client->connected())
-    {
-        trials++;
-
-        String clientId = this->hostName;
-        if (this->config.hasKey(this->config.key_client_id))
-            clientId = this->config.get<String>(this->config.key_client_id, this->hostName);
-
-        if (this->mqtt->connect(clientId.c_str()))
-        {
-            mdebugI("MQTT reconnected");
-
-            char cmd_topic[32];
-            sprintf(cmd_topic, "%s_%s/%s", this->prefix.c_str(), this->hostNameC, this->cmd_topic);
-
-            this->mqtt->subscribe(cmd_topic);
-            this->mqtt->setCallback(_mqtt_callback);
-
+            mdebugV("Network is not configured, but ignoring.");
             return true;
         }
         else
         {
-            if (this->isIgnoringConnectionErrors)
-            {
-                mdebugV("Client not connected, but ignoring.");
-                return false;
-            }
-
-            mdebugE("MQTT failed: %d", mqtt->state());
-
-            // if not connected in the third trial, give up
-            if (trials > 3)
-                return false;
-
-            // wait 5 seconds before retrying
-            delay(5000);
+            mdebugE("Network is not configured.");
+            return false;
         }
     }
 
-    return false;
-}
+    if (!network->isConnected())
+    {
+        if (this->isIgnoringConnectionErrors)
+        {
+            mdebugV("Network is not connected, but ignoring.");
+            return true;
+        }
+        else
+        {
+            if (this->isForceNetworkReconnect)
+            {
+                mdebugI("Network is not connected, forcing reconnect.");
+                network->reconnect();
+            }
+            else
+            {
+                mdebugE("Network is not connected, but force-reconnect is disabled");
+                return false;
+            }
+        }
+    }
 
-PubSubClient *Mokosh::getPubSubClient()
-{
-    return this->mqtt;
-}
+    auto mqtt = this->getMqttService();
+    if (mqtt == nullptr)
+    {
+        if (this->isIgnoringConnectionErrors)
+        {
+            mdebugV("MQTT is not configured, but ignoring.");
+            return true;
+        }
+        else
+        {
+            mdebugE("MQTT is not configured.");
+            return false;
+        }
+    }
 
-bool Mokosh::isWifiConnected()
-{
-    return WiFi.status() == WL_CONNECTED;
+    if (network->isConnected() && !mqtt->isConnected())
+    {
+        if (this->isForceNetworkReconnect)
+        {
+            mdebugI("MQTT is not connected, forcing reconnect.");
+            mqtt->reconnect();
+        }
+        else
+        {
+            mdebugE("Network is not connected, but force-reconnect is disabled");
+            return false;
+        }
+    }
+
+    return network->isConnected() && mqtt->isConnected();
 }
 
 Mokosh *Mokosh::setForceWiFiReconnect(bool value)
 {
-    this->isForceWifiReconnect = value;
+    this->isForceNetworkReconnect = value;
     return this;
 }
 
@@ -481,118 +292,18 @@ Mokosh *Mokosh::setHeartbeat(bool value)
     return this;
 }
 
-wl_status_t Mokosh::connectWifi()
-{
-    WiFi.enableAP(0);
-    char fullHostName[32] = {0};
-    sprintf(fullHostName, "%s_%s", this->prefix.c_str(), this->hostNameC);
-#if defined(ESP8266)
-    WiFi.hostname(fullHostName);
-#endif
-
-#if defined(ESP32)
-    // workaround for https://github.com/espressif/arduino-esp32/issues/2537
-    // workaround for https://github.com/espressif/arduino-esp32/issues/4732
-    // workaround for https://github.com/espressif/arduino-esp32/issues/6700#issuecomment-1140331981
-    WiFi.config(((u32_t)0x0UL), ((u32_t)0x0UL), ((u32_t)0x0UL));
-    WiFi.mode(WIFI_MODE_NULL);
-    WiFi.setHostname(fullHostName);
-
-    bool multi = this->config.hasKey(this->config.key_multi_ssid);
-#else
-    bool multi = false;
-#endif
-    if (multi)
-    {
-#if defined(ESP32)
-        WiFiMulti wifiMulti;
-
-        String multi = this->config.get<String>(this->config.key_multi_ssid, "");
-        mdebugV("Will try multiple SSID");
-
-        StaticJsonDocument<256> doc;
-
-        DeserializationError error = deserializeJson(doc, multi);
-
-        if (error)
-        {
-            mdebugE("Configured multiple ssid is wrong, deserialization error %s", error.c_str());
-            return wl_status_t::WL_NO_SSID_AVAIL;
-        }
-
-        for (JsonObject item : doc.as<JsonArray>())
-        {
-            const char *ssid = item["ssid"];
-            const char *password = item["password"];
-
-            wifiMulti.addAP(ssid, password);
-        }
-
-        if (wifiMulti.run(10000) == WL_CONNECTED)
-        {
-            mdebugI("Connected to %s", WiFi.SSID().c_str());
-        }
-#endif
-    }
-    else
-    {
-        String ssid = this->config.get<String>(this->config.key_ssid, "");
-        String password = this->config.get<String>(this->config.key_wifi_password);
-
-        if (ssid == "")
-        {
-            mdebugE("Configured ssid is empty, cannot connect to Wi-Fi");
-            return wl_status_t::WL_NO_SSID_AVAIL;
-        }
-
-        WiFi.begin(ssid.c_str(), password.c_str());
-        this->isWifiConfigured = true;
-
-        unsigned long startTime = millis();
-        while (WiFi.status() != WL_CONNECTED && millis() - startTime < 10000)
-        {
-            Serial.print(".");
-            delay(250);
-        }
-    }
-
-    wl_status_t wifiStatus = WiFi.status();
-    if (wifiStatus != lastWifiStatus && wifiStatus == WL_CONNECTED)
-    {
-        if (this->wifiEvents.onConnect != nullptr)
-            this->wifiEvents.onConnect();
-    }
-    else if (wifiStatus != lastWifiStatus && wifiStatus == WL_CONNECT_FAILED)
-    {
-        if (this->wifiEvents.onConnectFail != nullptr)
-            this->wifiEvents.onConnectFail();
-    }
-    lastWifiStatus = wifiStatus;
-
-    if (lastWifiStatus == WL_CONNECTED)
-    {
-        Serial.println(" ok");
-    }
-    else
-    {
-        Serial.println(" fail");
-    }
-
-    return lastWifiStatus;
-}
-
 Mokosh *Mokosh::getInstance()
 {
     return _instance;
 }
 
-Mokosh *Mokosh::setDebugLevel(DebugLevel level)
+Mokosh *Mokosh::setLogLevel(LogLevel level)
 {
     this->debugLevel = level;
 
-    if (this->debugReady)
+    for (auto &debug : this->debugAdapters)
     {
-        mdebugW("Setting mdebug level should be before begin(), ignoring for internals.");
+        debug->setActive(level);
     }
 
     return this;
@@ -608,33 +319,18 @@ void Mokosh::loop()
         ticker->update();
     }
 
-    wl_status_t wifiStatus = WiFi.status();
-    if (wifiStatus != lastWifiStatus)
+    this->reconnect();
+
+    for (auto &service : this->services)
     {
-        lastWifiStatus = wifiStatus;
-
-        if (lastWifiStatus == WL_DISCONNECTED)
-        {
-            if (this->wifiEvents.onDisconnect != nullptr)
-                this->wifiEvents.onDisconnect();
-        }
+        service.second->loop();
     }
-
-    if (!this->mqtt->connected())
-    {
-        this->reconnect();
-    }
-
-    if (this->mqtt != nullptr)
-        this->mqtt->loop();
-
-    Debug.handle();
-    ArduinoOTA.handle();
 }
 
 void Mokosh::factoryReset()
 {
-    this->config.removeFile();
+    mdebugI("Factory reset initialized");
+    LittleFS.format();
     ESP.restart();
 }
 
@@ -645,21 +341,31 @@ void Mokosh::publishShortVersion()
     if (sep != -1)
     {
         String ver = this->version.substring(0, sep);
-        this->publish(version_topic, ver);
-        mdebugV("Version: %s", ver.c_str());
+        this->getMqttService()->publish(version_topic, ver);
+        mdebugD("Version: %s", ver.c_str());
     }
     else
     {
-        this->publish(version_topic, this->version);
-        mdebugV("Version: %s", this->version.c_str());
+        this->getMqttService()->publish(version_topic, this->version);
+        mdebugD("Version: %s", this->version.c_str());
     }
 }
 
 void Mokosh::_processCommand(String command)
 {
+    String param = "";
+    int eq = command.indexOf('=');
+    if (eq > -1)
+    {
+        param = command.substring(eq + 1);
+        command = command.substring(0, eq);
+    }
+    mdebugI("Command: %s, param %s", command.c_str(), param.c_str());
+
+    // try the built-in commands first
     if (command == "gver" || command == "getver")
     {
-        mdebugD("Version: %s", this->version.c_str());
+        mdebugV("Version: %s", this->version.c_str());
         this->publishShortVersion();
 
         return;
@@ -681,8 +387,8 @@ void Mokosh::_processCommand(String command)
 
     if (command == "getfullver")
     {
-        mdebugD("Version: %s", this->version.c_str());
-        this->publish(debug_response_topic, this->version);
+        mdebugV("Version: %s", this->version.c_str());
+        this->getMqttService()->publish(debug_response_topic, this->version);
 
         return;
     }
@@ -691,16 +397,8 @@ void Mokosh::_processCommand(String command)
     {
         char md5[128];
         ESP.getSketchMD5().toCharArray(md5, 128);
-        mdebugD("Firmware MD5: %s", md5);
-        this->publish(debug_response_topic, md5);
-
-        return;
-    }
-
-    if (command == "getbuilddate")
-    {
-        mdebugD("Build date: %s", this->buildDate.c_str());
-        this->publish(debug_response_topic, this->buildDate);
+        mdebugV("Firmware MD5: %s", md5);
+        this->getMqttService()->publish(debug_response_topic, md5);
 
         return;
     }
@@ -714,164 +412,49 @@ void Mokosh::_processCommand(String command)
 
     if (command == "factory")
     {
-        mdebugW("Factory reset initiated");
         this->factoryReset();
-
         return;
     }
 
-    if (command == "reloadconfig")
+    if (command == "showerror")
     {
-        mdebugI("Config reload initiated");
-        this->config.reload();
-
-        return;
-    }
-
-    if (command.startsWith("showerror="))
-    {
-        long errorCode = command.substring(10).toInt();
+        long errorCode = param.toInt();
         mdebugE("Error initiated: %ld", errorCode);
         this->error(errorCode);
         return;
     }
 
-    if (command == "saveconfig")
+    if (command == "setdebuglevel")
     {
-        mdebugD("Config saved");
-        this->config.save();
+        long level = param.toInt();
+        this->setLogLevel((LogLevel)(int)level);
         return;
     }
 
-    if (command.startsWith("showconfigs="))
+    // now try passing to the services
+    for (auto &service : this->services)
     {
-        String field = command.substring(12);
-        String value = this->config.get<String>(field.c_str());
-
-        this->publish(debug_response_topic, value);
-        mdebugD("config %s = %s", field.c_str(), value.c_str());
-        return;
+        if (service.second->command(command, param))
+            return;
     }
 
-    if (command.startsWith("showconfigi="))
-    {
-        String field = command.substring(12);
-        int value = this->config.get<int>(field.c_str());
-
-        this->publish(debug_response_topic, value);
-        mdebugD("config %s = %i", field.c_str(), value);
-        return;
-    }
-
-    if (command.startsWith("showconfigf="))
-    {
-        String field = command.substring(12);
-        float value = this->config.get<float>(field.c_str());
-
-        this->publish(debug_response_topic, value);
-        mdebugD("config %s = %f", field.c_str(), value);
-        return;
-    }
-
-    if (command.startsWith("setconfigs="))
-    {
-        String param = command.substring(11);
-
-        String field = param.substring(0, param.indexOf('|'));
-        String value = param.substring(param.indexOf('|') + 1);
-
-        mdebugD("Setting configuration: field: %s, new value: %s", field.c_str(), value.c_str());
-
-        this->config.set(field.c_str(), value);
-
-        return;
-    }
-
-    if (command.startsWith("setconfigi="))
-    {
-        String param = command.substring(11);
-
-        String field = param.substring(0, param.indexOf('|'));
-        String value = param.substring(param.indexOf('|') + 1);
-
-        mdebugD("Setting configuration: field: %s, new value: %d", field.c_str(), value.toInt());
-
-        this->config.set(field.c_str(), (int)(value.toInt()));
-
-        return;
-    }
-
-    if (command.startsWith("setconfigf="))
-    {
-        String param = command.substring(11);
-
-        String field = param.substring(0, param.indexOf('|'));
-        String value = param.substring(param.indexOf('|') + 1);
-
-        mdebugD("Setting configuration: field: %s, new value: %f", field.c_str(), value.toFloat());
-
-        this->config.set(field.c_str(), value.toFloat());
-
-        return;
-    }
-
-    if (command.startsWith("setdebuglevel="))
-    {
-        long level = command.substring(14).toInt();
-        this->setDebugLevel((DebugLevel)(int)level);
-        return;
-    }
-
+    // if they were not handled, pass to the custom command handler
     if (this->onCommand != nullptr)
     {
-        mdebugV("Passing command to custom command handler");
-        this->onCommand(command);
-    }
-}
-
-void Mokosh::_mqttCommandReceived(char *topic, uint8_t *message, unsigned int length)
-{
-    if (length > 64)
-    {
-        mdebugE("MQTT message too long, ignoring.");
-        return;
-    }
-
-    char msg[64] = {0};
-    for (unsigned int i = 0; i < length; i++)
-    {
-        msg[i] = message[i];
-    }
-    msg[length + 1] = 0;
-
-    if (String(topic) == this->getMqttPrefix() + String(this->cmd_topic))
-    {
-        mdebugV("MQTT command: %s", msg);
-        String command = String(msg);
-        this->_processCommand(command);
-    }
-    else
-    {
-        if (this->onMessage != nullptr)
-        {
-            this->onMessage(String(topic), message, length);
-        }
-        else
-        {
-            mdebugW("MQTT message received, but no handler, ignoring.");
-        }
+        mdebugD("Passing command to custom command handler");
+        this->onCommand(command, param);
     }
 }
 
 void Mokosh::registerIntervalFunction(fptr func, unsigned long time)
 {
-    mdebugV("Registering interval function on time %ld", time);
+    mdebugD("Registering interval function on time %ld", time);
     std::shared_ptr<TickTwo> ticker = std::make_shared<TickTwo>(func, time, 0, MILLIS);
     this->tickers.push_back(ticker);
 
     if (this->isAfterBegin)
     {
-        mdebugV("Called after begin(), running ticker immediately");
+        mdebugD("Called after begin(), running ticker immediately");
         ticker->start();
         return;
     }
@@ -879,7 +462,7 @@ void Mokosh::registerIntervalFunction(fptr func, unsigned long time)
 
 void Mokosh::registerTimeoutFunction(fptr func, unsigned long time, int runs, bool start)
 {
-    mdebugV("Registering oneshot function on time %ld that will run %d times", time, runs);
+    mdebugD("Registering oneshot function on time %ld that will run %d times", time, runs);
     std::shared_ptr<TickTwo> ticker = std::make_shared<TickTwo>(func, time, runs, MILLIS);
     this->tickers.push_back(ticker);
 
@@ -890,67 +473,19 @@ void Mokosh::registerTimeoutFunction(fptr func, unsigned long time, int runs, bo
     }
 }
 
-void Mokosh::publish(const char *subtopic, String payload)
-{
-    this->publish(subtopic, payload.c_str());
-}
-
-void Mokosh::publish(const char *subtopic, const char *payload)
-{
-    this->publish(subtopic, payload, false);
-}
-
-void Mokosh::publish(const char *subtopic, const char *payload, boolean retained)
-{
-    char topic[60] = {0};
-    sprintf(topic, "%s_%s/%s", this->prefix.c_str(), this->hostNameC, subtopic);
-
-    if (this->client == nullptr)
-    {
-        mdebugE("Cannot publish, Client was not constructed!");
-        return;
-    }
-
-    if (this->mqtt == nullptr)
-    {
-        mdebugE("Cannot publish, MQTT Client was not constructed!");
-        return;
-    }
-
-    if (!this->isMqttConfigured)
-    {
-        mdebugE("Cannot publish, broker address is not configured");
-        return;
-    }
-
-    if (!this->client->connected())
-    {
-        this->reconnect();
-    }
-
-    this->mqtt->publish(topic, payload, retained);
-}
-
-void Mokosh::publish(const char *subtopic, float payload)
-{
-    char spay[16];
-    dtostrf(payload, 4, 2, spay);
-
-    this->publish(subtopic, spay);
-}
-
 void Mokosh::error(int code)
 {
-    if (!this->debugReady)
+    if (this->debugAdapters.size() == 0)
     {
+        Serial.begin(115200);
         Serial.print("Critical error: ");
         Serial.print(code);
-        Serial.println(", debug not ready.");
+        Serial.println(", no debug adapters.");
     }
 
     if (this->onError != nullptr)
     {
-        mdebugV("Handler called for error %d", code);
+        mdebugD("Handler called for error %d", code);
         this->onError(code);
     }
     else
@@ -964,16 +499,12 @@ void Mokosh::error(int code)
         else
         {
             mdebugE("Unhandled error, code: %d, going loop.", code);
-            if (this->debugReady)
+            // if (isWifiConnected())
             {
-                if (this->client->connected() && this->mqtt->state() == MQTT_CONNECTED)
-                {
-                    this->publish(this->heartbeat_topic, "error_loop", true);
-                }
-            }
-            else
-            {
-                Serial.print("Going loop.");
+                // if (this->client->connected() && this->mqtt->state() == MQTT_CONNECTED)
+                // {
+                //     this->publish(this->heartbeat_topic, "error_loop", true);
+                // }
             }
 
             while (true)
@@ -990,55 +521,10 @@ Mokosh *Mokosh::setRebootOnError(bool value)
     return this;
 }
 
-Mokosh *Mokosh::setBuildMetadata(String version, String buildDate)
-{
-    if (this->isAfterBegin)
-    {
-        mdebugE("Must be called before begin()");
-        return this;
-    }
-
-    this->version = version;
-    this->buildDate = buildDate;
-    return this;
-}
-
-Mokosh *Mokosh::setOta(bool value)
-{
-    if (this->isAfterBegin)
-    {
-        mdebugE("Must be called before begin()");
-        return this;
-    }
-
-    this->isOTAEnabled = value;
-
-    if (this->isOTAEnabled)
-        this->isMDNSEnabled = true;
-
-    return this;
-}
-
 Mokosh *Mokosh::setIgnoreConnectionErrors(bool value)
 {
     this->isIgnoringConnectionErrors = value;
     return this;
-}
-
-Mokosh *Mokosh::setMDNS(bool value)
-{
-    this->isMDNSEnabled = value;
-    return this;
-}
-
-void Mokosh::addMDNSService(const char *service, const char *proto, uint16_t port)
-{
-    MDNS.addService(service, proto, port);
-}
-
-void Mokosh::addMDNSServiceProps(const char *service, const char *proto, const char *property, const char *value)
-{
-    MDNS.addServiceTxt(service, proto, property, value);
 }
 
 String Mokosh::getPrefix()
@@ -1051,13 +537,134 @@ String Mokosh::getHostName()
     return this->hostName;
 }
 
+String Mokosh::getHostNameWithPrefix()
+{
+    String result = this->prefix + "_" + this->hostName;
+    return result;
+}
+
 String Mokosh::getMqttPrefix()
 {
     String result = this->prefix + "_" + this->hostName + "/";
     return result;
 }
 
-Client *Mokosh::getClient()
+bool isDependentOn(std::shared_ptr<MokoshService> service, const char *key)
 {
-    return this->client;
+    auto it = std::find(service->getDependencies().begin(), service->getDependencies().end(), key);
+    return (it != service->getDependencies().end());
+}
+
+Mokosh *Mokosh::registerService(std::shared_ptr<MokoshService> service)
+{
+    const char *key = service->key();
+    if (strcmp(key, "") == 0)
+    {
+        return this->registerService(String(random(1, 100), HEX).c_str(), service);
+    }
+    else
+    {
+        return this->registerService(key, service);
+    }
+}
+
+Mokosh *Mokosh::registerService(const char *key, std::shared_ptr<MokoshService> service)
+{
+    this->services[key] = service;
+
+    if (this->isAfterBegin)
+    {
+        mdebugI("Service %s registered after begin, setting up immediately", key);
+        setupService(key, service);
+    }
+
+    return this;
+}
+
+Mokosh *Mokosh::registerDebugAdapter(std::shared_ptr<DebugAdapter> service)
+{
+    const char *key = service->key();
+    if (strcmp(key, "") == 0)
+    {
+        return this->registerService(String(random(1, 100), HEX).c_str(), service);
+    }
+    else
+    {
+        return this->registerService(key, service);
+    }
+}
+
+Mokosh *Mokosh::registerDebugAdapter(const char *key, std::shared_ptr<DebugAdapter> service)
+{
+    // adding both to the services list as well as special list of only debug adapters
+    this->services[key] = service;
+
+    if (this->isAfterBegin)
+    {
+        mdebugI("Debug Adapter %s registered after begin, setting up immediately", key);
+        setupService(key, service);
+    }
+
+    Mokosh::debugAdapters.push_back(service);
+
+    return this;
+}
+
+bool Mokosh::setupService(const char *key, std::shared_ptr<MokoshService> service)
+{
+    auto network = this->getNetworkService();
+    auto mqtt = this->getRegisteredService<MokoshWiFiService>(MokoshService::DEPENDENCY_MQTT);
+
+    if (isDependentOn(service, MokoshService::DEPENDENCY_NETWORK) && (network == nullptr))
+    {
+        mdebugE("Network dependent service %s cannot be set up because Network is not configured", key);
+        return this;
+    }
+
+    if (isDependentOn(service, MokoshService::DEPENDENCY_MQTT) && (network == nullptr || mqtt == nullptr))
+    {
+        mdebugE("MQTT dependent service %s cannot be set up because Network or MQTT are not configured", key);
+        return this;
+    }
+
+    // here should be some kind of dependency graph resolution
+    bool depsReady = true;
+    for (auto &deps : service->getDependencies())
+    {
+        // built-in network and MQTT services are ignored
+        if (strcmp(deps, MokoshService::DEPENDENCY_NETWORK) == 0)
+            continue;
+
+        if (strcmp(deps, MokoshService::DEPENDENCY_MQTT) == 0)
+            continue;
+
+        if (this->services.find(deps) == this->services.end())
+        {
+            mdebugE("Cannot setup service %s because the dependency %s is not set up yet.", key, deps);
+            return false;
+            break;
+        }
+    }
+
+    // services are not being setup more than once
+    if (!service->isSetup())
+        service->setup();
+
+    return true;
+}
+
+void Mokosh::setupServices()
+{
+    for (auto &service : this->services)
+    {
+        auto key = service.first;
+        auto value = service.second;
+
+        setupService(key, value);
+    }
+}
+
+bool Mokosh::isServiceRegistered(const char *key)
+{
+    return this->services.find(key) != this->services.end();
 }

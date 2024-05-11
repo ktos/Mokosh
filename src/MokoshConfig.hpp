@@ -4,8 +4,9 @@
 
 #include <Arduino.h>
 #include <ArduinoJson.h>
+#include "MokoshService.hpp"
 
-class MokoshConfig
+class MokoshConfig : public MokoshService
 {
 public:
     const char *key_broker = "broker";
@@ -16,6 +17,8 @@ public:
     const char *key_wifi_password = "password";
     const char *key_multi_ssid = "ssids";
     const char *key_client_id = "mqttClientId";
+
+    MokoshConfig(bool useFileSystem = true);
 
     template <typename T>
     // reads a given field from config.json
@@ -44,19 +47,16 @@ public:
     void set(const char *field, float value);
 
     // saves configuration to a config.json file
-    void save();
+    void saveConfig();
 
     // reads configuration from a config.json file
-    bool reload();
+    bool reloadFromFile();
 
     // checks if the key exists in configuration
     bool hasKey(const char *field);
 
     // removes configuration file
-    void removeFile();
-
-    // prepares file system
-    bool prepareFS();
+    void removeConfigFile();
 
     // returns if configuration has been set
     bool isConfigurationSet();
@@ -64,8 +64,24 @@ public:
     // returns if configuration file exists
     bool configFileExists();
 
+    // sets up the configuration system
+    virtual bool setup() override;
+
+    // unused, but required by services
+    virtual void loop() override;
+
+    virtual std::vector<const char *> getDependencies() override
+    {
+        return {};
+    }
+
+    virtual bool command(String command, String param) override;
+
+    static const char *KEY;
+
 private:
     StaticJsonDocument<1024> config;
+    bool useFileSystem;
 };
 
 #endif
