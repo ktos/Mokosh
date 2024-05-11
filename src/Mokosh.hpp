@@ -231,7 +231,7 @@ private:
     bool isOTAEnabled = false;
     bool isOTAInProgress = false;
     bool isIgnoringConnectionErrors = false;
-    bool isForceWifiReconnect = false;
+    bool isForceNetworkReconnect = true;
     bool isHeartbeatEnabled = true;
     bool isAfterBegin = false;
     bool isIPRetained = true;

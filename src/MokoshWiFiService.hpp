@@ -79,7 +79,7 @@ public:
 
     bool isConnected()
     {
-        return client->connected();
+        return WiFi.isConnected();
     }
 
     String getIP()

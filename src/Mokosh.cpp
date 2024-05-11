@@ -203,7 +203,7 @@ void Mokosh::publishIP()
         WiFi.localIP().toString().toCharArray(ipbuf, 15);
         snprintf(msg, sizeof(msg) - 1, "{\"ipaddress\": \"%s\"}", ipbuf);
 
-        mdebugD("Sending IP");
+        mdebugV("Sending IP");
         this->getMqttService()->publish(debug_ip_topic, msg, this->isIPRetained);
     }
 }
@@ -214,67 +214,75 @@ bool Mokosh::reconnect()
 
     if (network == nullptr)
     {
-        mdebugE("Network is not configured.");
-        return true;
-        // if (this->isIgnoringConnectionErrors)
-        // {
-        //     mdebugD("Client not connected, but ignoring.");
-        //     return false;
-        // }
+        if (this->isIgnoringConnectionErrors)
+        {
+            mdebugV("Network is not configured, but ignoring.");
+            return true;
+        }
+        else
+        {
+            mdebugE("Network is not configured.");
+            return false;
+        }
     }
 
-    if (!network->isConnected() && this->isForceWifiReconnect)
+    if (!network->isConnected())
     {
-        mdebugV("Wi-Fi is not connected at all, forcing reconnect.");
-        network->reconnect();
+        if (this->isIgnoringConnectionErrors)
+        {
+            mdebugV("Network is not connected, but ignoring.");
+            return true;
+        }
+        else
+        {
+            if (this->isForceNetworkReconnect)
+            {
+                mdebugI("Network is not connected, forcing reconnect.");
+                network->reconnect();
+            }
+            else
+            {
+                mdebugE("Network is not connected, but force-reconnect is disabled");
+                return false;
+            }
+        }
     }
 
-    // if (this->mqtt->connected())
-    //     return true;
+    auto mqtt = this->getMqttService();
+    if (mqtt == nullptr)
+    {
+        if (this->isIgnoringConnectionErrors)
+        {
+            mdebugV("MQTT is not configured, but ignoring.");
+            return true;
+        }
+        else
+        {
+            mdebugE("MQTT is not configured.");
+            return false;
+        }
+    }
 
-    // if (this->isWifiConfigured)
-    // {
-    //     if (!this->isWifiConnected() && this->isForceWifiReconnect)
-    //     {
-    //         mdebugD("Wi-Fi is not connected at all, forcing reconnect.");
-    //         bool result = this->connectWifi();
-    //         if (!result)
-    //         {
-    //             if (this->isIgnoringConnectionErrors)
-    //             {
-    //                 mdebugE("Failed to reconnect to Wi-Fi");
-    //             }
-    //             else
-    //             {
-    //                 this->error(MokoshErrors::NetworkConnectionFailed);
-    //             }
-    //         }
-    //     }
-    // }
-    // else
-    // {
-    //     mdebugD("Wi-Fi is not configured, raising onReconnectRequest event.");
-    //     if (this->events.onReconnectRequested != nullptr)
-    //     {
-    //         this->events.onReconnectRequested();
-    //     }
-    // }
+    if (network->isConnected() && !mqtt->isConnected())
+    {
+        if (this->isForceNetworkReconnect)
+        {
+            mdebugI("MQTT is not connected, forcing reconnect.");
+            mqtt->reconnect();
+        }
+        else
+        {
+            mdebugE("Network is not connected, but force-reconnect is disabled");
+            return false;
+        }
+    }
 
-    // uint8_t trials = 0;
-
-    // while (!this->mqtt->connected())
-    // {
-    //     trials++;
-
-    //
-    // }
-
-    return false;
+    return network->isConnected() && mqtt->isConnected();
 }
 
 Mokosh *Mokosh::setForceWiFiReconnect(bool value)
 {
-    this->isForceWifiReconnect = value;
+    this->isForceNetworkReconnect = value;
     return this;
 }
 
@@ -311,13 +319,7 @@ void Mokosh::loop()
         ticker->update();
     }
 
-    // if (!this->mqtt->connected())
-    // {
-    //     this->reconnect();
-    // }
-
-    // if (this->mqtt != nullptr)
-    //     this->mqtt->loop();
+    this->reconnect();
 
     for (auto &service : this->services)
     {

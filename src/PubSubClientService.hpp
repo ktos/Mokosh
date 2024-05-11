@@ -84,9 +84,7 @@ public:
 
     virtual bool reconnect()
     {
-        // a bit different behaviour depending is this the first or
-        // later reconnect - if the first one is failing, we are throwing
-        // error, if not - we are trying to go into a reconnect state
+        // TODO: crashes when the Wi-Fi connection is restored
 
         if (this->mqtt->connect(clientId.c_str()))
         {
@@ -143,6 +141,7 @@ public:
             return;
         }
 
+        mdebugD("Publishing message on topic %s: %s", topic, payload);
         this->mqtt->publish(topic, payload, retained);
     }
 
