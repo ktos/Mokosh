@@ -586,11 +586,11 @@ Mokosh *Mokosh::registerDebugAdapter(std::shared_ptr<DebugAdapter> service)
     const char *key = service->key();
     if (strcmp(key, "") == 0)
     {
-        return this->registerService(String(random(1, 100), HEX).c_str(), service);
+        return this->registerDebugAdapter(String(random(1, 100), HEX).c_str(), service);
     }
     else
     {
-        return this->registerService(key, service);
+        return this->registerDebugAdapter(key, service);
     }
 }
 
