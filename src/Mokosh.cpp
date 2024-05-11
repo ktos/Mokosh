@@ -604,9 +604,6 @@ Mokosh *Mokosh::registerLogger(const char *key, std::shared_ptr<MokoshLogger> se
 
     Mokosh::loggers.push_back(service);
 
-    // update all the loggers with current log level
-    this->setLogLevel(this->currentLogLevel);
-
     return this;
 }
 
