@@ -645,7 +645,8 @@ bool Mokosh::setupService(const char *key, std::shared_ptr<MokoshService> servic
 
     // services are not being setup more than once
     if (!service->isSetup())
-        service->setup();
+        if (!service->setup())
+            return false;
 
     return true;
 }
