@@ -200,7 +200,7 @@ void Mokosh::publishIP()
         WiFi.localIP().toString().toCharArray(ipbuf, 15);
         snprintf(msg, sizeof(msg) - 1, "{\"ipaddress\": \"%s\"}", ipbuf);
 
-        mlogV("Sending IP");
+        mlogV("Sending IP: %s", ipbuf);
         this->getMqttService()->publish(debug_ip_topic, msg, this->isIPRetained);
     }
 }
