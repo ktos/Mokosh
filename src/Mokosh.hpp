@@ -2,7 +2,6 @@
 
 #define MOKOSH
 
-// #include <PubSubClient.h>
 #include <TickTwo.h>
 #include <vector>
 #include <map>
@@ -12,6 +11,10 @@
 #include "MokoshHandlers.hpp"
 #include "MokoshService.hpp"
 #include "MokoshLogger.hpp"
+
+#if defined(USE_TINYUSB)
+#include <Adafruit_TinyUSB.h> // for Serial
+#endif
 
 #define EVENTS_COUNT 10
 #define HEARTBEAT 10000

@@ -115,6 +115,7 @@ void Mokosh::hello()
         this->registerIntervalFunction([&]()
                                        {
             if (this->isHeartbeatEnabled)
+            {
                     if (this->getMqttService() == nullptr)
                     {
                         if (this->isMqttUnused)
@@ -129,7 +130,8 @@ void Mokosh::hello()
                     else
                     {
                         this->getMqttService()->publish(_instance->heartbeat_topic, millis());
-                                        } },
+                    }
+            } },
                                        HEARTBEAT);
     }
 }
