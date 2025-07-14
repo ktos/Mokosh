@@ -1,7 +1,7 @@
 {
     "name": "Mokosh",
     "keywords": "iot",
-    "description": "Framework for ESP8266/ESP32 with support for simple scheduler, configuration, MQTT and RemoteDebug",
+    "description": "Framework for ESP8266/ESP32 with support for simple dependency, scheduler, configuration, MQTT and logging",
     "repository": {
         "type": "git",
         "url": "https://github.com/ktos/Mokosh"
@@ -13,11 +13,12 @@
             "maintainer": true
         }
     ],
-    "version": "0.9.0",
+    "version": "2.0.0",
     "frameworks": "arduino",
     "platforms": [
         "espressif8266",
-        "espressif32"
+        "espressif32",
+        "nordicnrf52"
     ],
     "dependencies": [
         {
@@ -25,16 +26,8 @@
             "version": "~6.21.1"
         },
         {
-            "name": "https://github.com/ktos/RemoteDebug",
-            "version": "~3.0.7"
-        },
-        {
-            "name": "knolleary/PubSubClient",
-            "version": "2.7.0"
-        },
-        {
-            "name": "ArduinoOTA",
-            "version": "^1.0.6"
+            "name": "hmueller01/PubSubClient3",
+            "version": "3.1.0"
         },
         {
             "name": "sstaub/TickTwo",
