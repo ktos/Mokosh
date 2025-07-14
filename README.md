@@ -2,13 +2,12 @@
 
 ![CI Status](https://github.com/ktos/Mokosh/actions/workflows/ci.yml/badge.svg)
 
-Mokosh is a pseudo-framework, extracted from the "Chione" project, with a goal
-to be a simple set of a functions for easily built similarly operated IoT
-devices.
+Mokosh is a pseudo-framework with a goal to be a simple set of a functions for
+easily built similarly operated IoT devices.
 
 Mokosh is built on single non-static global object and wraps a few typical
-things (connecting to Wi-Fi, connecting to MQTT, handling some basic commands)
-making them easier to use.
+things (connecting to Wi-Fi, connecting to MQTT, handling commands, recurring
+operations) making them easier to use.
 
 This version of Mokosh is heavily in development.
 

@@ -58,7 +58,7 @@ public:
 
     virtual bool isFirstConnection()
     {
-        return this->reconnectCount = 0;
+        return this->reconnectCount == 0;
     }
 
     virtual void loop() override
