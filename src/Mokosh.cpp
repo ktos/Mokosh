@@ -330,8 +330,6 @@ Mokosh *Mokosh::setLogLevel(LogLevel level)
 
 void Mokosh::loop()
 {
-    unsigned long now = millis();
-
     // updating all registered tickers
     for (auto &ticker : tickers)
     {
@@ -654,17 +652,16 @@ bool Mokosh::setupService(const char *key, std::shared_ptr<MokoshService> servic
     if (isDependentOn(service, MokoshService::DEPENDENCY_NETWORK) && !isNetwork)
     {
         mlogE("Network dependent service %s cannot be set up because Network is not configured", key);
-        return this;
+        return false;
     }
 
     if (isDependentOn(service, MokoshService::DEPENDENCY_MQTT) && (!isNetwork || !isMqtt))
     {
         mlogE("MQTT dependent service %s cannot be set up because Network or MQTT are not configured", key);
-        return this;
+        return false;
     }
 
     // here should be some kind of dependency graph resolution
-    bool depsReady = true;
     for (auto &deps : service->getDependencies())
     {
         // built-in network and MQTT services are ignored
@@ -678,7 +675,6 @@ bool Mokosh::setupService(const char *key, std::shared_ptr<MokoshService> servic
         {
             mlogE("Cannot setup service %s because the dependency %s is not set up yet.", key, deps);
             return false;
-            break;
         }
     }
 
