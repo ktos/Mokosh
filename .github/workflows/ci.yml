@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:        
-        example: [examples/DebugBasic/DebugBasic.ino, examples/ErrorBasic/ErrorBasic.ino, examples/IntervalBasic/IntervalBasic.ino, examples/WifiMqtt/WifiMqtt.ino, examples/MqttSubscribe/MqttSubscribe.ino, examples/MDNSService/MDNSService.ino]
+        example: [examples/LoggingBasic/LoggingBasic.ino, examples/ErrorBasic/ErrorBasic.ino, examples/IntervalBasic/IntervalBasic.ino, examples/WifiMqtt/WifiMqtt.ino, examples/MqttSubscribe/MqttSubscribe.ino, examples/MDNSService/MDNSService.ino]
 
     steps:
     - uses: actions/checkout@v4
@@ -36,10 +36,11 @@ jobs:
     - name: Install library dependencies
       run: | 
         pio pkg install -g -l bblanchon/ArduinoJson@^6.21.5        
-        pio pkg install -g -l knolleary/PubSubClient@2.8.0
+        pio pkg install -g -l hmueller01/PubSubClient3@3.1.0
         pio pkg install -g -l sstaub/TickTwo@4.4.0
 
     - name: Run PlatformIO
-      run: pio ci --lib="." --board=nodemcuv2 --board=esp-wrover-kit
+      run: pio ci --lib="." --board=nodemcuv2 --board=esp-wrover-kit --board=esp32dev
+      #  --board=pico --board=adafruit_feather_nrf52832
       env:
         PLATFORMIO_CI_SRC: ${{ matrix.example }}
