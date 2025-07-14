@@ -145,6 +145,9 @@ public:
     // about networking connections
     Mokosh *setOffline(bool value);
 
+    // sets if the MQTT is unused, must be called before begin()
+    Mokosh *setMqttUnused(bool value);
+
     // sets if the Wi-Fi should be reconnected on MQTT reconnect if needed
     Mokosh *setForceWiFiReconnect(bool value);
 
@@ -213,8 +216,16 @@ public:
             return std::static_pointer_cast<T>(this->services[key]);
         else
         {
-            mlogW("Service %s is not registered, returning NULL", key);
-            return nullptr;
+            // hack: do not show warnings for internal services
+            if (strcmp(key, MokoshService::DEPENDENCY_MQTT) == 0 || strcmp(key, MokoshService::DEPENDENCY_NETWORK) == 0)
+            {
+                return nullptr;
+            }
+            else
+            {
+                mlogW("Service %s is not registered, returning NULL", key);
+                return nullptr;
+            }
         }
     }
 
@@ -239,6 +250,7 @@ private:
     bool isAfterBegin = false;
     bool isIPRetained = true;
     bool isOffline = false;
+    bool isMqttUnused = false;
 
     LogLevel currentLogLevel = LogLevel::WARNING;
 

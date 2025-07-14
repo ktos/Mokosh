@@ -115,7 +115,21 @@ void Mokosh::hello()
         this->registerIntervalFunction([&]()
                                        {
             if (this->isHeartbeatEnabled)
-                this->getMqttService()->publish(_instance->heartbeat_topic, millis()); },
+                    if (this->getMqttService() == nullptr)
+                    {
+                        if (this->isMqttUnused)
+                        {
+                            // MQTT is unused, do not publish
+                            return;
+                        }
+
+                        mlogE("Cannot publish heartbeat, MQTT service is not registered.");
+                        return;
+                    }
+                    else
+                    {
+                        this->getMqttService()->publish(_instance->heartbeat_topic, millis());
+                                        } },
                                        HEARTBEAT);
     }
 }
@@ -155,7 +169,7 @@ void Mokosh::begin(bool autoconnect)
             this->error(MokoshErrors::NetworkConnectionFailed);
         }
 
-        if (!this->isServiceRegistered(MokoshService::DEPENDENCY_MQTT))
+        if (!this->isMqttUnused && !this->isServiceRegistered(MokoshService::DEPENDENCY_MQTT))
         {
             mlogD("autoconnect, registering default MQTT provider");
             auto mqtt = std::make_shared<PubSubClientService>();
@@ -208,6 +222,19 @@ void Mokosh::publishIP()
         snprintf(msg, sizeof(msg) - 1, "{\"ipaddress\": \"%s\"}", ipbuf);
 
         mlogV("Sending IP: %s", ipbuf);
+
+        if (this->getMqttService() == nullptr)
+        {
+            if (this->isMqttUnused)
+            {
+                // MQTT is unused, do not publish
+                return;
+            }
+
+            mlogE("Cannot publish version, MQTT service is not registered.");
+            return;
+        }
+
         this->getMqttService()->publish(debug_ip_topic, msg, this->isIPRetained);
     }
 }
@@ -215,6 +242,18 @@ void Mokosh::publishIP()
 Mokosh *Mokosh::setOffline(bool value)
 {
     this->isOffline = value;
+    return this;
+}
+
+Mokosh *Mokosh::setMqttUnused(bool value)
+{
+    if (this->isAfterBegin && value)
+    {
+        mlogE("MQTT unused cannot be set after begin(), ignoring.");
+        return this;
+    }
+
+    this->isMqttUnused = value;
     return this;
 }
 
@@ -264,6 +303,11 @@ bool Mokosh::reconnect()
         auto mqtt = this->getMqttService();
         if (mqtt == nullptr)
         {
+            if (this->isMqttUnused)
+            {
+                return network->isConnected();
+            }
+
             if (this->isIgnoringConnectionErrors)
             {
                 mlogV("MQTT is not configured, but ignoring.");
@@ -358,6 +402,18 @@ void Mokosh::factoryReset()
 
 void Mokosh::publishShortVersion()
 {
+    if (this->getMqttService() == nullptr)
+    {
+        if (this->isMqttUnused)
+        {
+            // MQTT is unused, do not publish
+            return;
+        }
+
+        mlogE("Cannot publish version, MQTT service is not registered.");
+        return;
+    }
+
     int sep = this->version.indexOf('+');
 
     if (sep != -1)
