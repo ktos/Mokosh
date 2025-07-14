@@ -12,7 +12,7 @@ Mokosh::Mokosh(String prefix, String version, bool useFilesystem, bool useSerial
 
     if (useSerial)
     {
-#if defined(ARDUINO_RASPBERRY_PI_PICO)
+#if defined(PICO_RP2040)
 #warning "Serial on RPi Pico should be started in the sketch, workaround for now"
 #else
         Serial.begin(115200);
@@ -460,6 +460,18 @@ void Mokosh::_processCommand(String command)
     if (command == "getfullver")
     {
         mlogV("Version: %s", this->version.c_str());
+
+        if (this->getMqttService() == nullptr)
+        {
+            if (this->isMqttUnused)
+            {
+                // MQTT is unused, do not publish
+                return;
+            }
+
+            mlogE("Cannot publish version, MQTT service is not registered.");
+            return;
+        }
         this->getMqttService()->publish(debug_response_topic, this->version);
 
         return;
@@ -471,6 +483,18 @@ void Mokosh::_processCommand(String command)
         char md5[128];
         ESP.getSketchMD5().toCharArray(md5, 128);
         mlogV("Firmware MD5: %s", md5);
+
+        if (this->getMqttService() == nullptr)
+        {
+            if (this->isMqttUnused)
+            {
+                // MQTT is unused, do not publish
+                return;
+            }
+
+            mlogE("Cannot publish md5, MQTT service is not registered.");
+            return;
+        }
         this->getMqttService()->publish(debug_response_topic, md5);
 
         return;
@@ -481,16 +505,12 @@ void Mokosh::_processCommand(String command)
     {
 #if defined(ESP32) || defined(ESP8266)
         ESP.restart();
+#elif defined(PICO_RP2040)
+        rp2040.restart();
 #else
 #warning Implement restart for this platform
 #endif
 
-        return;
-    }
-
-    if (command == "factory")
-    {
-        this->factoryReset();
         return;
     }
 
@@ -574,6 +594,8 @@ void Mokosh::error(int code)
             delay(10000);
 #if defined(ESP32) || defined(ESP8266)
             ESP.restart();
+#elif defined(PICO_RP2040)
+            rp2040.restart();
 #else
 #warning Implement restart for this platform
 #endif
