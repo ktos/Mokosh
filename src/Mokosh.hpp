@@ -108,9 +108,6 @@ public:
     // returns instance of Mokosh singleton
     static Mokosh *getInstance();
 
-    // removes config.json and reboots, entering FirstRun mode
-    void factoryReset();
-
     // the name of subtopic used for commands
     const char *cmd_topic = "cmd";
 

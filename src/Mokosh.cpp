@@ -394,18 +394,6 @@ void Mokosh::loop()
     }
 }
 
-void Mokosh::factoryReset()
-{
-    mlogI("Factory reset initialized");
-
-#if defined(ESP32) || defined(ESP8266)
-    LittleFS.format();
-    ESP.restart();
-#else
-#warning Implement factory reset for this platform
-#endif
-}
-
 void Mokosh::publishShortVersion()
 {
     if (this->getMqttService() == nullptr)
