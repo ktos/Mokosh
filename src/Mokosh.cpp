@@ -12,6 +12,9 @@ Mokosh::Mokosh(String prefix, String version, bool useFilesystem, bool useSerial
 
     if (useSerial)
     {
+#if defined(ARDUINO_RASPBERRY_PI_PICO)
+#warning "Serial on RPi Pico should be started in the sketch, workaround for now"
+#else
         Serial.begin(115200);
         Serial.println();
         Serial.println();
@@ -20,6 +23,7 @@ Mokosh::Mokosh(String prefix, String version, bool useFilesystem, bool useSerial
         Serial.println(".");
 
         this->registerLogger("SERIAL_DEBUG", std::make_shared<SerialLogger>());
+#endif
     }
 
     char hostString[16] = {0};

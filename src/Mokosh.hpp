@@ -13,7 +13,7 @@
 #include "MokoshLogger.hpp"
 
 #if defined(USE_TINYUSB)
-#include <Adafruit_TinyUSB.h> // for Serial
+#include <Adafruit_TinyUSB.h> // for Serial on NRF52
 #endif
 
 #define EVENTS_COUNT 10

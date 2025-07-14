@@ -13,10 +13,15 @@
 #include <Client.h>
 #endif
 
+#if defined(ARDUINO_RASPBERRY_PI_PICO)
+#include <Client.h>
+#include <functional>
+#endif
+
 class Mokosh;
 class MokoshConfig;
 
-#if defined(ESP8266) || defined(ESP32)
+#if defined(ESP8266) || defined(ESP32) || defined(ARDUINO_RASPBERRY_PI_PICO)
 typedef std::function<void(String, uint8_t *msg, unsigned int length)> THandlerFunction_Message;
 #elif defined(NRF52) || defined(NRF52840_XXAA)
 typedef void (*THandlerFunction_Message)(String, uint8_t *, unsigned int);
