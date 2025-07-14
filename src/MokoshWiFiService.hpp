@@ -15,7 +15,7 @@
 
 #include <Mokosh.hpp>
 
-#if defined(ESP32) || defined(ESP8266)
+#if (defined(ESP32) && SOC_WIFI_SUPPORTED) || defined(ESP8266)
 
 class MokoshWiFiService : public MokoshNetworkService
 {

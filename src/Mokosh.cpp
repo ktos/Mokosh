@@ -150,7 +150,7 @@ String Mokosh::getVersion()
 
 void Mokosh::begin(bool autoconnect)
 {
-#if defined(ESP32) || defined(ESP8266)
+#if (defined(ESP32) && SOC_WIFI_SUPPORTED) || defined(ESP8266)
     // if there is no "NETWORK" providing service registered previously (before begin()),
     // register a Wi-Fi network providing service, if autoconnect is true,
     // as well as MQTT provider
@@ -259,7 +259,7 @@ Mokosh *Mokosh::setMqttUnused(bool value)
 
 bool Mokosh::reconnect()
 {
-#if defined(ESP32) || defined(ESP8266)
+#if (defined(ESP32) && SOC_WIFI_SUPPORTED) || defined(ESP8266)
     if (!this->isOffline)
     {
         auto network = this->getRegisteredService<MokoshWiFiService>(MokoshService::DEPENDENCY_NETWORK);

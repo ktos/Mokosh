@@ -19,9 +19,11 @@ need a custom device firmware.
 Code is prepared for the Arduino platform, building is tested using platformio.
 
 Originally was prepared for ESP8266 (NodeMCU, WeMos D1 R2, ESP-01S), then ESP32
-(testedon ESP32, ESP32-S3, ESP32-C3, ESP32-C6 on various boards), and NRF52
-(tested on Adafruit's Feather boards). Works both with Arduino Core 2.x and Core
-3.x for ESP32.
+(tested on ESP32, ESP32-S3, ESP32-C3, ESP32-C6, ESP32-H2 on various boards), and
+NRF52 (tested on Adafruit's Feather boards). Works both with Arduino Core 2.x
+and Core 3.x for ESP32.
+
+Of course, NRF52 or ESP32-H2 do not support Wi-Fi features.
 
 You have to just include the main file somewhere in the beginning of your
 Arduino sketch:
