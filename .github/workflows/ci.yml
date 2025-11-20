@@ -11,7 +11,7 @@ jobs:
         example: [examples/LoggingBasic/LoggingBasic.ino, examples/ErrorBasic/ErrorBasic.ino, examples/IntervalBasic/IntervalBasic.ino, examples/WifiMqtt/WifiMqtt.ino, examples/MqttSubscribe/MqttSubscribe.ino, examples/MDNSService/MDNSService.ino]
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: Cache pip
       uses: actions/cache@v4
       with:
